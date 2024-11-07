@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer tailwind-base, primevue, tailwind-utilities;
+
+@layer tailwind-base {
+    @tailwind base;
+}
+
+@layer tailwind-utilities {
+    @tailwind components;
+    @tailwind utilities;
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        scrollbar-width: none;
+    }
+
+    .text-xsm {
+        font-size: 0.7rem;
+    }
+
+    .border-color {
+        @apply border border-surface-200 dark:border-surface-500;
+    }
+}
