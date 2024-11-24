@@ -3,14 +3,14 @@
     <div class="flex flex-col gap-1">
       <question-list-item
         class="flex-1 h-16 mr-2.5"
-        v-for="(h, i) in props.history"
-        :key="i"
+        v-for="h in props.history"
+        :key="h.history_id"
         :progress="h.progress"
-        :selected="props.selected === i"
+        :selected="props.selected === h.history_id"
         :tag="h.tag"
         :title="h.subject"
-        :date="h.createAt"
-        @click="emit('update:selected', i)"
+        :date="h.create_time"
+        @click="handleClicked(h.history_id)"
       />
     </div>
   </scroll-panel>
@@ -19,6 +19,7 @@
 <script lang="ts" setup>
 import QuestionListItem from '@/components/HistoryListItem.vue'
 import type { History } from '@/types'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   history: Array<History>
@@ -26,6 +27,13 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update:selected'])
+
+const router = useRouter()
+
+const handleClicked = (id: number) => {
+  emit('update:selected', id)
+  router.push({ name: 'answer', params: { id: id } })
+}
 </script>
 
 <style scoped>

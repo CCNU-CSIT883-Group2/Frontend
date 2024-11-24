@@ -1,11 +1,59 @@
-<script setup lang="ts">
-
-</script>
-
 <template>
-  $END$
+  <div class="overflow-y-scroll" ref="panel">
+    <question-list-item
+      v-for="(q, i) in props.questions"
+      :key="q.id"
+      :no="i + 1"
+      :question="q"
+      class="my-2 mx-3"
+      ref="questionRef"
+      v-model:is-collapsed="collapsed[i]"
+    />
+  </div>
 </template>
 
-<style scoped>
+<script setup lang="ts">
+import type { Question } from '@/types'
+import QuestionListItem from '@/components/QuestionListItem.vue'
+import {
+  type ComponentPublicInstance,
+  reactive,
+  ref,
+  useTemplateRef,
+  watch,
+  watchEffect,
+} from 'vue'
+import { useDebounceFn, useScroll } from '@vueuse/core'
 
-</style>
+const props = withDefaults(
+  defineProps<{
+    questions?: Array<Question>
+  }>(),
+  {
+    questions: () => [] as Array<Question>,
+  },
+)
+
+const questionRef = useTemplateRef<ComponentPublicInstance[]>('questionRef' as never)
+const questionsHeight = ref<number[]>([])
+const collapsed = reactive(Array(props.questions.length).fill(false))
+const recalculateHeight = useDebounceFn(() => {
+  scrollTo.value = -1
+  questionsHeight.value = questionRef?.value?.map((q) => q.$el.clientHeight) as number[]
+}, 500)
+
+watch([questionRef, collapsed], () => {
+  recalculateHeight()
+})
+
+const scrollTo = defineModel('scrollTo', { type: Number, default: -1 })
+const panel = ref<HTMLElement | null>(null)
+const { y } = useScroll(panel, { behavior: 'smooth' })
+watchEffect(() => {
+  if (scrollTo.value !== -1) {
+    y.value = questionsHeight.value.slice(0, scrollTo.value).reduce((acc, cur) => acc + cur, 0)
+  }
+})
+</script>
+
+<style scoped></style>

@@ -7,8 +7,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Avatar: typeof import('primevue/avatar')['default']
     Button: typeof import('primevue/button')['default']
     CircleProgressBar: typeof import('./src/components/CircleProgressBar.vue')['default']
+    Fieldset: typeof import('primevue/fieldset')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     HeaderBar: typeof import('./src/components/HeaderBar.vue')['default']
     HeaderBarButton: typeof import('./src/components/HeaderBarButton.vue')['default']
@@ -19,6 +21,7 @@ declare module 'vue' {
     QuestionListItem: typeof import('./src/components/QuestionListItem.vue')['default']
     QuestionSidebar: typeof import('./src/components/QuestionSidebar.vue')['default']
     QuestionTagInput: typeof import('./src/components/QuestionTagInput.vue')['default']
+    Rating: typeof import('primevue/rating')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScrollPanel: typeof import('primevue/scrollpanel')['default']
@@ -27,5 +30,7 @@ declare module 'vue' {
     SideBar: typeof import('./src/components/SideBar.vue')['default']
     SideBarButton: typeof import('./src/components/SideBarButton.vue')['default']
     Tag: typeof import('primevue/tag')['default']
+    ToggleButton: typeof import('primevue/togglebutton')['default']
+    VirtualScroller: typeof import('primevue/virtualscroller')['default']
   }
 }

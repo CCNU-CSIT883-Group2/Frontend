@@ -1,12 +1,20 @@
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-export const useCounterStore = defineStore('counter', () => {
-  const count = ref(0)
-  const doubleCount = computed(() => count.value * 2)
-  function increment() {
-    count.value++
+export const useUserStore = defineStore('user', () => {
+  const user = ref({ name: 'Evan You', uid: '123123' })
+  const name = computed(() => user.value.name)
+  const uid = computed(() => user.value.uid)
+
+  function setName(newName: string) {
+    user.value.name = newName
   }
 
-  return { count, doubleCount, increment }
+  return { user, name, uid, setName }
+})
+
+export const useUserSettingsStore = defineStore('userSettings', () => {
+  const settings = ref({ darkMode: false, questions: { showDifficulty: true } })
+
+  return { settings }
 })
