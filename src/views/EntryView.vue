@@ -1,23 +1,22 @@
 <template>
   <div>
-    <div class="bg-surface-0 dark:bg-surface-950 px-6 py-20 md:px-12 lg:px-20">
+    <div class="bg-surface-0 dark:bg-surface-950 w-screen h-screen flex items-center justify-center lg:px-20">
       <div class="text-surface-700 dark:text-surface-100 text-center">
         <div class="text-primary font-bold mb-4">
-          <i class="pi pi-discord" />&nbsp;POWERED BY DISCORD
+          <i class="pi pi-brain" />&nbsp;POWERED BY CHATGPT
         </div>
         <div
           class="text-surface-900 dark:text-surface-0 font-bold text-5xl mb-4"
         >
-          Join Our Design Community
+          Welcome to ChatCNU
         </div>
         <div class="text-surface-700 dark:text-surface-100 text-2xl mb-8">
-          Lorem ipsum dolor sit, amet consectetur adipisicing elit. Velit
-          numquam eligendi quos.
+          Revolutionize question generation with the power of ChatGPT.
         </div>
         <Button
           class="font-bold px-8 py-4 whitespace-nowrap"
-          icon="pi pi-discord"
-          label="Join Now"
+          icon="pi pi-brain"
+          label="Get Started"
           raised
           rounded
           @click="goToOverview"
@@ -29,13 +28,13 @@
       class="bg-surface-0 dark:bg-surface-950 px-6 py-20 md:px-12 lg:px-20 text-center"
     >
       <div class="mb-4 font-bold text-3xl">
-        <span class="text-surface-900 dark:text-surface-0">One Product, </span>
+        <span class="text-surface-900 dark:text-surface-0">Discover, </span>
         <span class="text-primary-600 dark:text-primary-400"
-          >Many Solutions</span
+          >Innovate, Excel</span
         >
       </div>
       <div class="text-surface-700 dark:text-surface-0/70 mb-[3rem]">
-        Ac turpis egestas maecenas pharetra convallis posuere morbi leo urna.
+        Transform your learning and teaching experiences with AI-driven solutions.
       </div>
       <div
         class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-3.5 gap-y-6"
@@ -45,19 +44,18 @@
             class="w-16 h-16 mb-6 rounded-lg flex items-center justify-center mx-auto bg-surface-0 dark:bg-surface-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.12),0px_0px_2px_0px_rgba(0,0,0,0.06),0px_4px_10px_0px_rgba(0,0,0,0.03)]"
           >
             <i
-              class="pi pi-desktop text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
+              class="pi pi-user text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
             />
           </span>
           <div
             class="text-surface-900 dark:text-surface-0 text-xl mb-2 font-medium"
           >
-            Built for Developers
+            Personalized Question Generation
           </div>
           <p
             class="text-surface-700 dark:text-surface-0/70 leading-normal max-w-sm mx-auto text-center"
           >
-            Duis aute irure dolor in reprehenderit in voluptate velit esse
-            cillum dolore eu fugiat nulla pariatur.
+            Tailored questions based on users' learning level, interests, and goals.
           </p>
         </div>
         <div class="w-full p-4">
@@ -65,19 +63,18 @@
             class="w-16 h-16 mb-6 rounded-lg flex items-center justify-center mx-auto bg-surface-0 dark:bg-surface-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.12),0px_0px_2px_0px_rgba(0,0,0,0.06),0px_4px_10px_0px_rgba(0,0,0,0.03)]"
           >
             <i
-              class="pi pi-lock text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
+              class="pi pi-list text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
             />
           </span>
           <div
             class="text-surface-900 dark:text-surface-0 text-xl mb-2 font-medium"
           >
-            End-to-End Encryption
+            Diverse Question Types
           </div>
           <p
             class="text-surface-700 dark:text-surface-0/70 leading-normal max-w-sm mx-auto text-center"
           >
-            Risus nec feugiat in fermentum posuere urna nec. Posuere
-            sollicitudin aliquam ultrices sagittis.
+            Supports multiple formats, including multiple-choice, fill-in-the-blank, and more.
           </p>
         </div>
         <div class="w-full p-4">
@@ -85,19 +82,18 @@
             class="w-16 h-16 mb-6 rounded-lg flex items-center justify-center mx-auto bg-surface-0 dark:bg-surface-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.12),0px_0px_2px_0px_rgba(0,0,0,0.06),0px_4px_10px_0px_rgba(0,0,0,0.03)]"
           >
             <i
-              class="pi pi-check-circle text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
+              class="pi pi-refresh text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
             />
           </span>
           <div
             class="text-surface-900 dark:text-surface-0 text-xl mb-2 font-medium"
           >
-            Easy to Use
+            Real-Time Updates
           </div>
           <p
             class="text-surface-700 dark:text-surface-0/70 leading-normal max-w-sm mx-auto text-center"
           >
-            Ornare suspendisse sed nisi lacus sed viverra tellus. Neque volutpat
-            ac tincidunt vitae semper.
+            Stay ahead with questions dynamically generated from the latest trends.
           </p>
         </div>
         <div class="w-full p-4">
@@ -105,19 +101,18 @@
             class="w-16 h-16 mb-6 rounded-lg flex items-center justify-center mx-auto bg-surface-0 dark:bg-surface-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.12),0px_0px_2px_0px_rgba(0,0,0,0.06),0px_4px_10px_0px_rgba(0,0,0,0.03)]"
           >
             <i
-              class="pi pi-globe text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
+              class="pi pi-user-edit text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
             />
           </span>
           <div
             class="text-surface-900 dark:text-surface-0 text-xl mb-2 font-medium"
           >
-            Fast & Global Support
+            Labor Resource Savings
           </div>
           <p
             class="text-surface-700 dark:text-surface-0/70 leading-normal max-w-sm mx-auto text-center"
           >
-            Fermentum et sollicitudin ac orci phasellus egestas tellus rutrum
-            tellus.
+            Significantly reduce time and costs in question creation with automation.
           </p>
         </div>
         <div class="w-full p-4">
@@ -125,19 +120,18 @@
             class="w-16 h-16 mb-6 rounded-lg flex items-center justify-center mx-auto bg-surface-0 dark:bg-surface-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.12),0px_0px_2px_0px_rgba(0,0,0,0.06),0px_4px_10px_0px_rgba(0,0,0,0.03)]"
           >
             <i
-              class="pi pi-github text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
+              class="pi pi-comments text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
             />
           </span>
           <div
             class="text-surface-900 dark:text-surface-0 text-xl mb-2 font-medium"
           >
-            Open Source
+            High Interactivity
           </div>
           <p
             class="text-surface-700 dark:text-surface-0/70 leading-normal max-w-sm mx-auto text-center"
           >
-            Nec tincidunt praesent semper feugiat. Sed adipiscing diam donec
-            adipiscing tristique risus nec feugiat.
+            Users can get real-time hints, explanations, and detailed analyses.
           </p>
         </div>
         <div class="w-full p-4">
@@ -145,25 +139,25 @@
             class="w-16 h-16 mb-6 rounded-lg flex items-center justify-center mx-auto bg-surface-0 dark:bg-surface-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.12),0px_0px_2px_0px_rgba(0,0,0,0.06),0px_4px_10px_0px_rgba(0,0,0,0.03)]"
           >
             <i
-              class="pi pi-shield text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
+              class="pi pi-chart-line text-2xl lg:text-3xl text-primary-500 dark:text-primary-400"
             />
           </span>
           <div
             class="text-surface-900 dark:text-surface-0 text-xl mb-2 font-medium"
           >
-            Trusted Security
+            Practice Data Analysis
           </div>
           <p
             class="text-surface-700 dark:text-surface-0/70 leading-normal max-w-sm mx-auto text-center"
           >
-            Mattis rhoncus urna neque viverra justo nec ultrices. Id cursus
-            metus aliquam eleifend.
+            Analyze user performance to recommend targeted and effective questions.
           </p>
         </div>
       </div>
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
 import Button from 'primevue/button'
 import { useRouter } from 'vue-router'
@@ -171,6 +165,6 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const goToOverview = () => {
-  router.push({ name: 'overview' })
+  router.push({ name: 'login' })
 }
 </script>
