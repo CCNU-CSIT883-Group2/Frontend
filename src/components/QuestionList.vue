@@ -8,6 +8,7 @@
       class="my-2 mx-3"
       ref="questionRef"
       v-model:is-collapsed="collapsed[i]"
+      v-model:attempt="attempts[i]"
     />
   </div>
 </template>
@@ -41,7 +42,6 @@ const recalculateHeight = useDebounceFn(() => {
   scrollTo.value = -1
   questionsHeight.value = questionRef?.value?.map((q) => q.$el.clientHeight) as number[]
 }, 500)
-
 watch([questionRef, collapsed], () => {
   recalculateHeight()
 })
@@ -53,6 +53,10 @@ watchEffect(() => {
   if (scrollTo.value !== -1) {
     y.value = questionsHeight.value.slice(0, scrollTo.value).reduce((acc, cur) => acc + cur, 0)
   }
+})
+
+const attempts = defineModel<number[][]>('attempts', {
+  default: [] as Array<number[]>,
 })
 </script>
 

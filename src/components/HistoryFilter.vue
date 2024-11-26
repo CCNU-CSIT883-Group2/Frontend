@@ -1,24 +1,5 @@
 <template>
   <div class="flex flex-col gap-2">
-    <div class="flex flex-wrap items-center p-2 rounded-xl border-color">
-      <div class="gap-1 flex flex-wrap">
-        <Tag v-for="(tag, index) in searchContent" :key="index" severity="contrast">
-          {{ tag }}
-          <button @click="removeTag(index)">
-            <i class="pi pi-times" style="font-size: 0.75rem"></i>
-          </button>
-        </Tag>
-      </div>
-      <input
-        v-model="input"
-        class="border-0 outline-0 p-1 text-sm flex-1 bg-transparent"
-        placeholder="Search Question"
-        @blur="addTag"
-        @keydown.enter.prevent="addTag"
-        @keydown.backspace="removeLastTag"
-      />
-    </div>
-
     <float-label variant="on">
       <Select
         v-model="selectedSubjects"
@@ -84,45 +65,22 @@ const props = withDefaults(
   {
     subjects: () => [],
     tags: () => [],
-    filter: () => {
-      return { content: [], status: ProgressStatus.All }
-    },
   },
 )
 
-const emit = defineEmits(['update:filter'])
-
-// Tag input
-const searchContent = ref<Array<string>>([])
-const input = ref('')
-
-function addTag() {
-  const tag = input.value.trim()
-  input.value = ''
-  if (tag && !searchContent.value.includes(tag)) {
-    searchContent.value.push(tag)
-  }
-  emit('update:filter', { ...props.filter, tags: searchContent.value })
-}
-
-function removeTag(index: number) {
-  searchContent.value.splice(index, 1)
-}
-
-function removeLastTag() {
-  if (!input.value && searchContent.value.length > 0) {
-    searchContent.value.pop()
-  }
-}
+const filter = defineModel<HistoryFilter>('filter', {
+  default: { content: [], status: ProgressStatus.All },
+})
 
 // Subject
 const selectedSubjects = ref<string | null>()
 
 watch(selectedSubjects, (value) => {
   if (value !== null) {
-    return emit('update:filter', { ...props.filter, subject: value })
+    filter.value = { ...filter.value, subject: value }
+    return
   }
-  emit('update:filter', { ...props.filter, subject: '' })
+  filter.value = { ...filter.value, subject: '' }
 })
 
 // Tag
@@ -130,9 +88,10 @@ const selectedTags = ref<string | null>()
 
 watch(selectedTags, (value) => {
   if (value !== null) {
-    return emit('update:filter', { ...props.filter, tag: value })
+    filter.value = { ...filter.value, tag: value }
+    return
   }
-  emit('update:filter', { ...props.filter, tag: '' })
+  filter.value = { ...filter.value, tag: '' }
 })
 
 // Progress
@@ -145,7 +104,7 @@ watch(progress, (value) => {
     status = value.value
   }
 
-  emit('update:filter', { ...props.filter, status })
+  filter.value = { ...filter.value, status }
 })
 
 const progressOption = ref([

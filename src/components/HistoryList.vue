@@ -6,10 +6,10 @@
         v-for="h in props.history"
         :key="h.history_id"
         :progress="h.progress"
-        :selected="props.selected === h.history_id"
+        :selected="selected === h.history_id"
         :tag="h.tag"
         :title="h.subject"
-        :date="h.create_time"
+        :date="new Date(h.create_time * 1000)"
         @click="handleClicked(h.history_id)"
       />
     </div>
@@ -19,20 +19,15 @@
 <script lang="ts" setup>
 import QuestionListItem from '@/components/HistoryListItem.vue'
 import type { History } from '@/types'
-import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   history: Array<History>
-  selected: number
 }>()
 
-const emit = defineEmits(['update:selected'])
-
-const router = useRouter()
+const selected = defineModel<number>('selected', { default: -1 })
 
 const handleClicked = (id: number) => {
-  emit('update:selected', id)
-  router.push({ name: 'answer', params: { id: id } })
+  selected.value = id
 }
 </script>
 

@@ -7,7 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Avatar: typeof import('primevue/avatar')['default']
+    AnswerPanel: typeof import('./src/components/AnswerPanel.vue')['default']
     Button: typeof import('primevue/button')['default']
     CircleProgressBar: typeof import('./src/components/CircleProgressBar.vue')['default']
     Fieldset: typeof import('primevue/fieldset')['default']
@@ -17,20 +17,19 @@ declare module 'vue' {
     HistoryFilter: typeof import('./src/components/HistoryFilter.vue')['default']
     HistoryList: typeof import('./src/components/HistoryList.vue')['default']
     HistoryListItem: typeof import('./src/components/HistoryListItem.vue')['default']
+    InputNumber: typeof import('primevue/inputnumber')['default']
+    InputText: typeof import('primevue/inputtext')['default']
+    QuestionCreatePanel: typeof import('./src/components/QuestionCreatePanel.vue')['default']
     QuestionList: typeof import('./src/components/QuestionList.vue')['default']
     QuestionListItem: typeof import('./src/components/QuestionListItem.vue')['default']
     QuestionSidebar: typeof import('./src/components/QuestionSidebar.vue')['default']
-    QuestionTagInput: typeof import('./src/components/QuestionTagInput.vue')['default']
     Rating: typeof import('primevue/rating')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScrollPanel: typeof import('primevue/scrollpanel')['default']
     Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
-    SideBar: typeof import('./src/components/SideBar.vue')['default']
-    SideBarButton: typeof import('./src/components/SideBarButton.vue')['default']
+    Slider: typeof import('primevue/slider')['default']
     Tag: typeof import('primevue/tag')['default']
-    ToggleButton: typeof import('primevue/togglebutton')['default']
-    VirtualScroller: typeof import('primevue/virtualscroller')['default']
   }
 }

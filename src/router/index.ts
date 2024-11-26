@@ -1,12 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import OverviewView from '@/views/OverviewView.vue'
-import QuestionsView from '@/views/Questions/QuestionsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import UserProfileView from '@/views/UserProfileView.vue'
-import EntryView from '@/views/EntryView.vue'
-import RegisterView from '@/views/RegisterView.vue'
 import LoginView from '@/views/LoginView.vue'
-import AnswerView from '@/views/Questions/AnswerView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -14,12 +10,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'entry',
-      component: EntryView,
+      component: () => import('@/views/EntryView.vue'),
     },
     {
       path: '/register',
       name: 'register',
-      component: RegisterView,
+      component: () => import('@/views/RegisterView.vue'),
     },
     {
       path: '/login',
@@ -34,14 +30,7 @@ const router = createRouter({
     {
       path: '/questions',
       name: 'questions',
-      component: QuestionsView,
-      children: [
-        {
-          path: ':id',
-          name: 'answer',
-          component: AnswerView,
-        },
-      ],
+      component: () => import('@/views/QuestionsView.vue'),
     },
     {
       path: '/settings',

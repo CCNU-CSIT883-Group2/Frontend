@@ -12,7 +12,7 @@
     <p class="mx-2.5 mb-2.5">{{ question.content }}</p>
     <div class="flex">
       <select-button
-        v-model="selected"
+        v-model="s"
         :options="question.options"
         :multiple="question.type == 'multi'"
         class="flex-1 flex flex-col"
@@ -21,8 +21,8 @@
           <div
             class="px"
             :class="{
-              'text-green-600 font-extrabold': answeredAndCorrect && question.answer == index,
-              'text-red-600 font-extrabold': answerAndIncorrect && selectedIndex == index,
+              'text-green-600 font-extrabold': isCorrectOption(index),
+              'text-red-600 font-extrabold': isWrongOption(index),
             }"
           >
             <span>{{ option }}</span>
@@ -42,44 +42,47 @@ const props = withDefaults(
     question: Question
     no: number
     answerSaved?: boolean
-    attempt?: number
   }>(),
   {
     answerSaved: false,
-    attempt: -1,
   },
 )
-const emits = defineEmits(['update:attempt', 'update:collapsed'])
 
-const isCollapsed = defineModel('isCollapsed', { type: Boolean, default: false })
+const isCollapsed = defineModel<boolean>('isCollapsed', { default: false })
 
 // const collapsed = ref(false)
 const handleClick = () => {
-  // collapsed.value = !collapsed.value
-  // emits('update:collapsed', collapsed.value)
-  // console.log(collapsed.value)
   isCollapsed.value = !isCollapsed.value
-  console.log(isCollapsed.value)
 }
 
-const selected = ref(null)
-const selectedIndex = computed(() => props.question.options.findIndex((o) => o === selected.value))
-
-watch(selected, (newVal) => {
-  if (newVal !== null) {
-    emits('update:attempt', selectedIndex.value)
+const s = ref<string | string[] | null>(null)
+watch(s, () => {
+  if (props.question.type === 'single') {
+    selected.value = s.value !== null ? [s.value as string] : []
+  } else if (props.question.type === 'multi') {
+    selected.value = s.value as string[]
   }
 })
+const selected = ref<string[]>([])
+const selectedIndex = computed(() => selected.value.map((s) => props.question.options.indexOf(s)))
+const attempt = defineModel<number[]>('attempt', { default: [] })
+watch(selected, () => {
+  attempt.value = selectedIndex.value
+})
 
-const correctAnswer = ref(props.question.options[props.question.answer])
+const correctAnswer = ref(props.question.answer.map((a) => props.question.options[a]))
 
-const answeredAndCorrect = computed(
-  () => selected.value !== null && props.answerSaved && correctAnswer.value === selected.value,
-)
+const isCorrectOption = (index: number) =>
+  selected.value.length !== 0 &&
+  props.answerSaved &&
+  correctAnswer.value === selected.value &&
+  props.question.answer.includes(index)
 
-const answerAndIncorrect = computed(
-  () => selected.value !== null && props.answerSaved && correctAnswer.value !== selected.value,
-)
+const isWrongOption = (index: number) =>
+  selected.value.length !== 0 &&
+  props.answerSaved &&
+  correctAnswer.value !== selected.value &&
+  selectedIndex.value.includes(index)
 
 const { settings } = useUserSettingsStore()
 </script>
