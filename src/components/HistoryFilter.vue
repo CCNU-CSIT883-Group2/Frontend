@@ -1,24 +1,27 @@
 <template>
   <div class="flex flex-col gap-2">
-    <float-label variant="on">
-      <Select
-        v-model="selectedSubjects"
-        :options="subjects"
-        filter
-        class="w-full border-color rounded-lg shadow-none"
-        labelClass="text-sm"
-        size="small"
-        :highlightOnSelect="false"
-        resetFilterOnHide
-        showClear
-        checkmark
-      >
-        <template #option="slot">
-          <span class="text-xsm font-bold"> {{ slot.option }} </span>
-        </template>
-      </Select>
-      <label class="text-xsm">Subject</label>
-    </float-label>
+    <div class="flex justify-between gap-2">
+      <float-label variant="on" class="flex-1">
+        <Select
+          v-model="selectedSubjects"
+          :options="subjects"
+          filter
+          class="w-full border-color rounded-lg shadow-none"
+          labelClass="text-sm"
+          size="small"
+          :highlightOnSelect="false"
+          resetFilterOnHide
+          showClear
+          checkmark
+        >
+          <template #option="slot">
+            <span class="text-xsm font-bold"> {{ slot.option }} </span>
+          </template>
+        </Select>
+        <label class="text-xsm">Subject</label>
+      </float-label>
+      <Button size="small" icon="pi pi-plus" severity="secondary" @click="create = true"></Button>
+    </div>
 
     <div class="flex justify-between gap-2">
       <float-label class="flex-1" variant="on">
@@ -60,13 +63,12 @@
 import { type HistoryFilter, ProgressStatus } from '@/types'
 import { ref, watch } from 'vue'
 
-const props = withDefaults(
-  defineProps<{ filter?: HistoryFilter; subjects?: string[]; tags?: string[] }>(),
-  {
-    subjects: () => [],
-    tags: () => [],
-  },
-)
+withDefaults(defineProps<{ subjects?: string[]; tags?: string[] }>(), {
+  subjects: () => [],
+  tags: () => [],
+})
+
+const create = defineModel<boolean>('create', { default: false })
 
 const filter = defineModel<HistoryFilter>('filter', {
   default: { content: [], status: ProgressStatus.All },

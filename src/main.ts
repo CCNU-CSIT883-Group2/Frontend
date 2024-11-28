@@ -9,12 +9,15 @@ import router from './router'
 import PrimeVue from 'primevue/config'
 import 'primeicons/primeicons.css'
 import { Noir } from '@/theme'
+import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
 
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
 app.use(PrimeVue, {
+  ripple: true,
   theme: {
     preset: Noir,
     options: {
@@ -26,5 +29,7 @@ app.use(PrimeVue, {
     },
   },
 })
+app.use(ToastService)
+app.use(ConfirmationService)
 
 app.mount('#app')

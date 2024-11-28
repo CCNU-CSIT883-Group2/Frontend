@@ -1,15 +1,20 @@
 <template>
-  <div class="overflow-y-scroll" ref="panel">
-    <question-list-item
-      v-for="(q, i) in props.questions"
-      :key="q.id"
-      :no="i + 1"
-      :question="q"
-      class="my-2 mx-3"
-      ref="questionRef"
-      v-model:is-collapsed="collapsed[i]"
-      v-model:attempt="attempts[i]"
-    />
+  <div class="flex flex-col">
+    <div class="flex justify-end mb-2">
+      <split-button label="Save" :model="submitButtons" size="small" severity="secondary" />
+    </div>
+    <div class="overflow-y-scroll flex-1" ref="panel">
+      <question-list-item
+        v-for="(q, i) in props.questions"
+        :key="q.id"
+        :no="i + 1"
+        :question="q"
+        class="my-2 mx-3"
+        ref="questionRef"
+        v-model:is-collapsed="collapsed[i]"
+        v-model:attempt="attempts[i]"
+      />
+    </div>
   </div>
 </template>
 
@@ -58,6 +63,13 @@ watchEffect(() => {
 const attempts = defineModel<number[][]>('attempts', {
   default: [] as Array<number[]>,
 })
+
+const submitButtons = [
+  {
+    label: 'Submit',
+    command: () => {},
+  },
+]
 </script>
 
 <style scoped></style>

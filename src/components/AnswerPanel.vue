@@ -43,12 +43,14 @@ const props = defineProps<{
 }>()
 
 const questionsList = ref<Question[]>([])
+const questionsListLength = ref(0)
 const attempts = ref<number[][]>([])
 const { questions: question, isFetching, cancel } = useQuestions(props.historyId)
 watch(isFetching, () => {
   if (!isFetching.value) {
     questionsList.value = question.value as Question[]
     attempts.value = questionsList.value.map(() => [])
+    questionsListLength.value = questionsList.value.length
   }
 })
 onUnmounted(() => {

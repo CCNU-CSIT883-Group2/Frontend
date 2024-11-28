@@ -47,6 +47,10 @@ export interface QuestionResponse {
   type: string
 }
 
+export interface AddHistoryResponse {
+  history: History[]
+}
+
 export interface Response<T> {
   code: number
   info: string

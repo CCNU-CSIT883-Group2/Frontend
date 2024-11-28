@@ -16,7 +16,7 @@ export function useQuestions(historyID: number) {
   axios
     .get<Response<QuestionResponse[]>>(`/questions`, {
       method: 'get',
-      data: { history_id: historyID, username: name },
+      params: { history_id: historyID, username: name },
       signal,
     })
     .then((response) => {

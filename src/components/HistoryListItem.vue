@@ -12,7 +12,7 @@
           'text-surface-0': selected,
           'text-surface-950': !selected,
         }"
-        class="dark:text-surface-300"
+        class="dark:text-surface-300 select-none"
       >
         {{ props.title }}
       </b>
@@ -23,7 +23,7 @@
         }"
         class="h-4 w-fit rounded px-2.5 py-0.5 flex items-center font-light text-xsm dark:text-surface-300"
       >
-        <span>{{ props.tag }}</span>
+        <span class="select-none">{{ props.tag }}</span>
       </div>
     </div>
     <div class="flex items-center gap-1">
@@ -31,7 +31,7 @@
         :class="{ 'text-surface-0': selected }"
         class="h-4 w-fit px-2.5 flex items-center font-light text-xsm dark:text-surface-300"
       >
-        <span>{{ date }}</span>
+        <span class="select-none">{{ date }}</span>
       </div>
       <circle-progress-bar :percentage="props.progress * 100" :size="24" :stroke-width="5" />
     </div>
