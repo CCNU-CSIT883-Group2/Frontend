@@ -2,9 +2,10 @@ import { useUserStore } from '@/stores/user'
 import type { Question, QuestionResponse, Response } from '@/types'
 import { ref, shallowRef } from 'vue'
 import axios from '@/axios'
+import { storeToRefs } from 'pinia'
 
 export function useQuestions(historyID: number) {
-  const { name } = useUserStore()
+  const { name } = storeToRefs(useUserStore())
 
   const isFetching = ref(true)
   const questions = shallowRef([] as Question[])

@@ -1,6 +1,5 @@
 // src/axiosInterceptor.js
 import axios from 'axios'
-import { useUserStore } from '@/stores/user'
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_SERVER_BASE_URL as string,
@@ -9,10 +8,15 @@ const axiosInstance = axios.create({
 // 添加请求拦截器
 axiosInstance.interceptors.request.use(
   (config) => {
-    const jwtToken = useUserStore().token
-    if (jwtToken) {
-      config.headers['Authorization'] = jwtToken
+    if (config.url === '/login' || config.url === '/register') {
+      return config
     }
+    const token = localStorage.getItem('token')
+
+    if (token) {
+      config.headers['Authorization'] = token
+    }
+
     return config
   },
   (error) => Promise.reject(error),
