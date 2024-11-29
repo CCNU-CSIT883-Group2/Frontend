@@ -1,12 +1,8 @@
-import { useUserStore } from '@/stores/user'
 import type { Question, QuestionResponse, Response } from '@/types'
 import { ref, shallowRef } from 'vue'
 import axios from '@/axios'
-import { storeToRefs } from 'pinia'
 
 export function useQuestions(historyID: number) {
-  const { name } = storeToRefs(useUserStore())
-
   const isFetching = ref(true)
   const questions = shallowRef([] as Question[])
   const error = ref('')
@@ -17,12 +13,13 @@ export function useQuestions(historyID: number) {
   axios
     .get<Response<QuestionResponse[]>>(`/questions`, {
       method: 'get',
-      params: { history_id: historyID, username: name },
+      params: { history_id: historyID },
       signal,
     })
     .then((response) => {
       return response.data.data.map((question) => ({
         id: question.qid,
+        history_id: question.history_id,
         content: question.content,
         explanation: question.explanation,
         difficulty: question.difficulty,

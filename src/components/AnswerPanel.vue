@@ -6,6 +6,7 @@
         class="flex-1"
         :scroll-to="scrollToIndex"
         v-model:attempts="attempts"
+        :answer-saved="answered"
       />
       <div class="flex-none w-72 p-2 border rounded-2xl flex flex-col gap-2 border-color">
         <div class="flex gap-2 flex-col">
@@ -37,6 +38,7 @@ import { onUnmounted, ref, watch } from 'vue'
 import type { Question } from '@/types'
 import { useQuestions } from '@/hooks/useQuestions'
 import QuestionList from '@/components/QuestionList.vue'
+import { useAttempts } from '@/hooks/useAttempts'
 
 const props = defineProps<{
   historyId: number
@@ -45,16 +47,45 @@ const props = defineProps<{
 const questionsList = ref<Question[]>([])
 const questionsListLength = ref(0)
 const attempts = ref<number[][]>([])
-const { questions: question, isFetching, cancel } = useQuestions(props.historyId)
-watch(isFetching, () => {
-  if (!isFetching.value) {
+const {
+  questions: question,
+  isFetching: isFetchingQuestion,
+  cancel: cancelFetchingQuestion,
+} = useQuestions(props.historyId)
+
+const qh = watch(isFetchingQuestion, () => {
+  if (!isFetchingQuestion.value) {
     questionsList.value = question.value as Question[]
     attempts.value = questionsList.value.map(() => [])
     questionsListLength.value = questionsList.value.length
+    qh.stop()
   }
 })
+
+const answered = ref(false)
+const {
+  attempts: attempt,
+  isFetching: isFetchingAttempts,
+  cancel: cancelFetchingAttempts,
+} = useAttempts(props.historyId)
+const ah = watch([isFetchingQuestion, isFetchingAttempts], () => {
+  if (!isFetchingAttempts.value && !isFetchingQuestion.value) {
+    const attempts_map = new Map<number, number[]>()
+
+    attempt.value.forEach((a) => {
+      attempts_map.set(a.QID, a.user_answers)
+    })
+
+    attempts.value = questionsList.value.map((q) => attempts_map.get(q.id) ?? [])
+    answered.value = attempts.value.every((a) => a.length > 0)
+
+    ah.stop()
+  }
+})
+
 onUnmounted(() => {
-  cancel()
+  cancelFetchingQuestion()
+  cancelFetchingAttempts()
 })
 
 const scrollToIndex = ref(-1)

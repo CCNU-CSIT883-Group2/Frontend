@@ -3,10 +3,10 @@ import { defineStore } from 'pinia'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref({
-    name: 'Evan You',
-    uid: '123123',
+    name: 'cyyyx',
+    uid: '00609ca6-9437-41b5-8d1a-1b7d44665718',
     token:
-      'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJVSUQiOiIyZGZiY2Y0Zi03MmZiLTQ1YmYtYmZlNC1iOTE1NjUyMDcyMjEiLCJuYW1lIjoiYmJiIiwicGFzc3dvcmQiOiIxMjM0NTYiLCJlbWFpbCI6ImJiYmJiYkBiYmIuY29tIiwicm9sZSI6InRlYWNoZXIifQ.GOH6Z5WImZQRyirO2XMrismD2Q_n_61KctWeM1ACvME',
+      'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJVSUQiOiI2MGVkMDBlZS1hOGJmLTRhNmUtOGQzYS0wMWUxMDE2MmZiYjMiLCJuYW1lIjoiY3l5eXgiLCJwYXNzd29yZCI6IjEyMzQ1NiIsImVtYWlsIjoiY3l5eXhAMTIzLmNvbSIsInJvbGUiOiJ0ZWFjaGVyIn0.Gy6VBI8nJk0yAb7V9ZZweByLIhpZQXWOPCd2T9-3rog',
   })
   const name = computed(() => user.value.name)
   const uid = computed(() => user.value.uid)

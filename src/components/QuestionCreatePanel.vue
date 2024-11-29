@@ -9,7 +9,7 @@
         class="flex flex-col justify-between w-full h-64 mt-8 px-4"
       >
         <float-label variant="on" class="w-full">
-          <input-text id="subject" class="w-full" name="subject" />
+          <input-text id="subject" class="w-full" name="subject" v-model="question.subject" />
           <label for="subject">Subject</label>
         </float-label>
         <message v-if="form.subject?.invalid" severity="error" size="small" variant="simple">
@@ -17,7 +17,7 @@
         </message>
 
         <float-label variant="on" class="w-full">
-          <input-text id="tag" class="w-full" name="tag" />
+          <input-text id="tag" class="w-full" name="tag" v-model="question.tag" />
           <label for="tag">Tag</label>
         </float-label>
         <message v-if="form.tag?.invalid" severity="error" size="small" variant="simple">
@@ -26,10 +26,11 @@
 
         <div class="flex justify-between flex-wrap">
           <float-label variant="on" class="w-2/5">
-            <input-number id="number" class="w-full" name="number" />
+            <input-number id="number" class="w-full" name="number" v-model="question.number" />
             <label for="number">Number of Questions</label>
           </float-label>
           <select-button
+            v-model="question.type"
             size="small"
             :options="questionTypes"
             :default-value="questionTypes[0]"
@@ -77,12 +78,7 @@ const historyStore = useQuestionHistoryStore()
 
 const onFormSubmit = ({ valid }) => {
   if (valid) {
-    historyStore.add({
-      subject: question.subject,
-      tag: question.tag,
-      number: question.number,
-      type: questionType.value,
-    })
+    historyStore.add(question.subject, question.tag, question.number, questionType.value)
   }
 }
 </script>

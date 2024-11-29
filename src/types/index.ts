@@ -20,6 +20,7 @@ export enum ProgressStatus {
 }
 
 export interface Question {
+  history_id: number
   id: number
   content: string
   explanation: string
@@ -49,6 +50,20 @@ export interface QuestionResponse {
 
 export interface AddHistoryResponse {
   history: History[]
+}
+
+export interface AnswerResponse {
+  attempt: {
+    history_id: number
+    QID: number
+    is_correct: boolean
+  }
+}
+
+export interface Attempt {
+  user_answers: number[]
+  QID: number
+  history_id: number
 }
 
 export interface Response<T> {

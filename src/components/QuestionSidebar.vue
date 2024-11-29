@@ -19,6 +19,9 @@ import HistoryFilter from '@/components/HistoryFilter.vue'
 import { type HistoryFilter as Filter, ProgressStatus } from '@/types'
 import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
 import { storeToRefs } from 'pinia'
+import { useToast } from 'primevue'
+
+const toast = useToast()
 
 const create = ref(false)
 watch(create, (value) => {
@@ -46,7 +49,19 @@ watch(added, () => {
 })
 
 onMounted(() => {
-  historyStore.fetch()
+  const error = historyStore.fetch()
+
+  const handler = watch(error, () => {
+    if (error.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: error.value,
+        life: 3000,
+      })
+    }
+    handler.stop()
+  })
 })
 
 // filter
@@ -59,7 +74,9 @@ const filter = ref<Filter>({
 
 // filtered history
 const filteredHistory = computed(() => {
-  return histories.value
+  const hists = histories.value ?? []
+
+  return hists
     .filter((h) => {
       return (
         // filter by selected
