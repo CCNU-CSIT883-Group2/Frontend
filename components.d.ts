@@ -10,6 +10,7 @@ declare module 'vue' {
     AnswerPanel: typeof import('./src/components/AnswerPanel.vue')['default']
     Button: typeof import('primevue/button')['default']
     CircleProgressBar: typeof import('./src/components/CircleProgressBar.vue')['default']
+    ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     Fieldset: typeof import('primevue/fieldset')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     HeaderBar: typeof import('./src/components/HeaderBar.vue')['default']
@@ -27,6 +28,9 @@ declare module 'vue' {
     Rating: typeof import('primevue/rating')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ScrollPanel: typeof import('primevue/scrollpanel')['default']
+    Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
+    Toast: typeof import('primevue/toast')['default']
   }
 }

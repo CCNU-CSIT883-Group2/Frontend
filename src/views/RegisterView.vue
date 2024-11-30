@@ -1,6 +1,6 @@
 
 <template>
-  <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center px-4 sm:px-8">
+  <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center px-4" >
     <div class="bg-surface-0 dark:bg-surface-900 p-8 shadow-lg rounded-lg w-full max-w-2xl flex flex-col items-center">
       <!-- 顶部标题 -->
       <div class="text-center mb-6 w-full">

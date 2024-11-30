@@ -15,7 +15,7 @@
 
       <div>
         <label for="email1" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Name</label>
-        <InputText id="email1" type="text" placeholder="Email address" class="w-full mb-4" v-model="name" />
+        <InputText id="name" type="text" placeholder="Name" class="w-full mb-4" v-model="name" />
 
         <label for="password1" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Password</label>
         <InputText id="password1" type="password" placeholder="Password" class="w-full mb-4" v-model="password" />
@@ -54,7 +54,7 @@ import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 
 // 定义表单相关数据
-const name=ref<string>(''); // 用户输入的用户名
+const name =ref<string>(''); // 用户输入的用户名
 const email = ref<string>(''); // 用户输入的邮箱
 const password = ref<string>(''); // 用户输入的密码
 const rememberMe = ref<boolean>(false); // 是否勾选记住我
@@ -77,13 +77,17 @@ const handleLogin = async (): Promise<void> => {
     if (response.data.code === 200) {
       // 登录成功，保存 token 到 localStorage
       localStorage.setItem('token', response.data.data.token);
-      localStorage.setItem('username',(name.value));
+      localStorage.setItem('username',(response.data.data.User.name));
+      localStorage.setItem('email',(response.data.data.User.email))
+      localStorage.setItem('role',(response.data.data.User.role))
       console.log(response.data.data)
 
       const user = useUserStore()
       user.user.token = response.data.data.token
       user.user.name = response.data.data.User.name
       user.user.uid = response.data.data.User.UID
+      user.user.role = response.data.data.User.role
+      user.user.email = response.data.data.User.email
 
       alert('Login successful!');
       errorMessage.value = '';

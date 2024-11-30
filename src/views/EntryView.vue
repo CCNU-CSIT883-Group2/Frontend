@@ -1,4 +1,5 @@
 <template>
+=
   <div>
     <div class="bg-surface-0 dark:bg-surface-950 w-screen h-screen flex items-center justify-center lg:px-20">
       <div class="text-surface-700 dark:text-surface-100 text-center">
