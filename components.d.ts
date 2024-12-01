@@ -9,6 +9,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AnswerPanel: typeof import('./src/components/AnswerPanel.vue')['default']
     Button: typeof import('primevue/button')['default']
+    Checkbox: typeof import('primevue/checkbox')['default']
     CircleProgressBar: typeof import('./src/components/CircleProgressBar.vue')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     Dialog: typeof import('primevue/dialog')['default']

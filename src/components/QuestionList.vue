@@ -11,7 +11,7 @@
         <Button
           label="Submit"
           size="small"
-          severity="secondary"
+          severity="primary"
           @click="submit"
           :disabled="disableSubmit"
         />

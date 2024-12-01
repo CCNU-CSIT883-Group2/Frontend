@@ -130,7 +130,7 @@ const fetchChartData = async () => {
     let subjectTotalAttempts = {};
 
     const subjectsList = subjects.value; // 从 historyStore 中获取到科目列表
-   
+
 
     // 遍历 dailyStatistics 并累计每个科目的刷题数
     dailyStatistics.forEach(stat => {
@@ -142,8 +142,8 @@ const fetchChartData = async () => {
         subjectTotalAttempts[subject] += attempt; // 累加每个科目的刷题数
       });
     });
-   
-  
+
+
 
     // 计算总刷题数
     const totalAttempts = Object.values(subjectTotalAttempts).reduce((total, attempts) => total + attempts, 0);
@@ -170,10 +170,10 @@ const fetchChartData = async () => {
       ],
     };
 
-    
+
     pieChartData.value = {
       labels: subjects.value,
-     
+
 
       datasets: [
         {

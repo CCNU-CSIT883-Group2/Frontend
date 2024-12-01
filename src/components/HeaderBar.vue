@@ -17,6 +17,7 @@
       <div class="flex items-center gap-4 mr-3">
         <header-bar-button :icon="isDark ? 'sun' : 'moon'" @click="toggleDark()" />
         <header-bar-button icon="cog" @click="showSettings = true" />
+        <header-bar-button icon="users" to="profile" />
       </div>
 
       <Dialog class="flex" v-model:visible="showSettings" header="Settings" :modal="true">
@@ -46,9 +47,9 @@
       </Dialog>
     </div>
 
-    <div class="flex justify-center flex-none" @click="() => router.push({ name: `profile` })">
-      <i class="pi pi-bullseye text-surface-950 dark:text-surface-400 ml-3 text-2xl" />
-    </div>
+    <!--    <div class="flex justify-center" @click="() => router.push({ name: `profile` })">-->
+    <!--      <i class="pi pi-users text-surface-950 dark:text-surface-400 ml-3 text-2xl" />-->
+    <!--    </div>-->
   </div>
 </template>
 
@@ -63,8 +64,8 @@ import { storeToRefs } from 'pinia'
 const router = useRouter()
 
 const topAreaActions = ref([
-  { icon: 'home', to: 'overview' },
   { icon: 'pencil', to: 'questions' },
+  { icon: 'chart-bar', to: 'overview' },
 ])
 
 const isDark = useDark()
