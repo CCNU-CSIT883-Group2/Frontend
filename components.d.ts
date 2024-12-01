@@ -7,14 +7,12 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AnswerNavPanel: typeof import('./src/components/AnswerNavPanel.vue')['default']
     AnswerPanel: typeof import('./src/components/AnswerPanel.vue')['default']
     Button: typeof import('primevue/button')['default']
     CircleProgressBar: typeof import('./src/components/CircleProgressBar.vue')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     Fieldset: typeof import('primevue/fieldset')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
-    Form: typeof import('@primevue/forms/form')['default']
     HeaderBar: typeof import('./src/components/HeaderBar.vue')['default']
     HeaderBarButton: typeof import('./src/components/HeaderBarButton.vue')['default']
     HistoryFilter: typeof import('./src/components/HistoryFilter.vue')['default']
@@ -33,10 +31,6 @@ declare module 'vue' {
     ScrollPanel: typeof import('primevue/scrollpanel')['default']
     Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
-    Slider: typeof import('primevue/slider')['default']
-    SplitButton: typeof import('primevue/splitbutton')['default']
-    Tag: typeof import('primevue/tag')['default']
     Toast: typeof import('primevue/toast')['default']
-    Toolbar: typeof import('primevue/toolbar')['default']
   }
 }

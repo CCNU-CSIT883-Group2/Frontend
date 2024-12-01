@@ -3,18 +3,22 @@ import { defineStore } from 'pinia'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref({
-    name: 'cyyyx',
-    uid: '00609ca6-9437-41b5-8d1a-1b7d44665718',
-    token:
-      'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJVSUQiOiI2MGVkMDBlZS1hOGJmLTRhNmUtOGQzYS0wMWUxMDE2MmZiYjMiLCJuYW1lIjoiY3l5eXgiLCJwYXNzd29yZCI6IjEyMzQ1NiIsImVtYWlsIjoiY3l5eXhAMTIzLmNvbSIsInJvbGUiOiJ0ZWFjaGVyIn0.Gy6VBI8nJk0yAb7V9ZZweByLIhpZQXWOPCd2T9-3rog',
-  })
+    name: localStorage.getItem('name') ?? 'cyx',
+    uid: localStorage.getItem('uid')?? '123123',
+    token:localStorage.getItem('token')?? '123123',
+    email:localStorage.getItem('email')?? '123123',
+    role:localStorage.getItem('role')?? '123123',
+    })
+  const role = computed(() => user.value.role)
+  const email = computed(() => user.value.email)
   const name = computed(() => user.value.name)
   const uid = computed(() => user.value.uid)
   const token = computed(() => user.value.token)
 
-  return { user, name, uid, token }
+  return { user,role,email, name, uid, token }
 })
 
+//显示答题时间和题目难度
 export const useUserSettingsStore = defineStore('userSettings', () => {
   const settings = ref({ darkMode: false, questions: { showDifficulty: true } })
 
