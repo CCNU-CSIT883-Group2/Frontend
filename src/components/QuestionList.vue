@@ -1,14 +1,22 @@
 <template>
   <div class="flex flex-col">
-    <div class="flex justify-end mb-2 gap-2">
-      <Button
-        label="Submit"
-        size="small"
-        severity="secondary"
-        @click="submit"
-        :disabled="disableSubmit"
-      />
-      <Button icon="pi pi-refresh" size="small" severity="secondary" @click="resetState" />
+    <div class="flex justify-between mb-2 gap-2 items-center">
+      <div class="flex gap-2">
+        <span class="font-bold" v-show="settings.questions.showTime">Time Used:</span>
+        <span class="font-mono" v-show="settings.questions.showTime">
+          {{ Math.floor(timeUsed / 60) }}:{{ String(timeUsed % 60).padStart(2, '0') }}
+        </span>
+      </div>
+      <div class="flex gap-4">
+        <Button
+          label="Submit"
+          size="small"
+          severity="secondary"
+          @click="submit"
+          :disabled="disableSubmit"
+        />
+        <Button icon="pi pi-refresh" size="small" severity="secondary" @click="resetState" />
+      </div>
     </div>
     <div class="overflow-y-auto flex-1 no-scrollbar" ref="panel">
       <question-list-item
@@ -33,15 +41,19 @@ import QuestionListItem from '@/components/QuestionListItem.vue'
 import {
   type ComponentPublicInstance,
   computed,
+  onMounted,
+  onUnmounted,
   reactive,
   ref,
   useTemplateRef,
   watch,
   watchEffect,
 } from 'vue'
-import { useDebounceFn, useScroll } from '@vueuse/core'
+import { useDebounceFn, useIntervalFn, useScroll } from '@vueuse/core'
 import { useSubmit } from '@/hooks/useSubmit'
 import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
+import { storeToRefs } from 'pinia'
+import { useUserSettingsStore } from '@/stores/user'
 
 const props = withDefaults(
   defineProps<{
@@ -82,6 +94,7 @@ const answered = ref<boolean[]>([])
 watch(answerSaved, () => {
   if (answerSaved.value) {
     answered.value = props.questions.map(() => true)
+    handler.pause()
   }
 })
 
@@ -121,7 +134,22 @@ const resetState = () => {
   answered.value = Array(props.questions.length).fill(false)
   answerSaved.value = false
   reset.value = true
+  timeUsed.value = 0
+  handler.resume()
 }
+
+const { settings } = storeToRefs(useUserSettingsStore())
+
+const timeUsed = ref(0)
+const handler = useIntervalFn(() => {
+  timeUsed.value++
+}, 1000)
+
+onMounted(() => {})
+
+onUnmounted(() => {
+  handler.pause()
+})
 </script>
 
 <style scoped></style>

@@ -1,7 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import type { AddHistoryResponse, History, Response } from '@/types'
-import { useUserStore } from '@/stores/user'
+import { useUserSettingsStore, useUserStore } from '@/stores/user'
 import axios from '@/axios'
 
 export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
@@ -40,9 +40,24 @@ export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
   const add = (subject: string, tag: string, number: number, type: string) => {
     isFetching.value = true
     const error = ref<string | null>(null)
+
+    const { settings } = storeToRefs(useUserSettingsStore())
+
+    const modelMap = new Map([
+      ['ChatGPT', 'C'],
+      ['Kimi', 'K'],
+    ])
+
     axios
       .post<Response<AddHistoryResponse>>('/questions/create', {
-        data: { name: name.value, subject, tag, number, type },
+        data: {
+          name: name.value,
+          subject,
+          tag,
+          number,
+          type,
+          model: modelMap.get(settings.value.questions.generate_model),
+        },
       })
       .then((response) => {
         if (!response.data.data) {

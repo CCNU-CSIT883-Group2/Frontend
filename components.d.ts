@@ -11,6 +11,7 @@ declare module 'vue' {
     Button: typeof import('primevue/button')['default']
     CircleProgressBar: typeof import('./src/components/CircleProgressBar.vue')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
+    Dialog: typeof import('primevue/dialog')['default']
     Fieldset: typeof import('primevue/fieldset')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     HeaderBar: typeof import('./src/components/HeaderBar.vue')['default']
@@ -32,5 +33,9 @@ declare module 'vue' {
     Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
     Toast: typeof import('primevue/toast')['default']
+    ToggleSwitch: typeof import('primevue/toggleswitch')['default']
+  }
+  export interface ComponentCustomProperties {
+    Tooltip: typeof import('primevue/tooltip')['default']
   }
 }

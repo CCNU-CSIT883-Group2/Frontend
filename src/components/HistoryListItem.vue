@@ -14,7 +14,7 @@
         }"
         class="dark:text-surface-300 select-none"
       >
-        {{ props.title }}
+        {{ props.tag }}
       </b>
       <div
         :class="{
@@ -23,7 +23,9 @@
         }"
         class="h-4 w-fit rounded px-2.5 py-0.5 flex items-center font-light text-xsm dark:text-surface-300"
       >
-        <span class="select-none">{{ props.tag }}</span>
+        <span class="select-none" v-tooltip="props.title">
+          {{ props.title.length > 15 ? props.title.slice(0, 15) + '...' : props.title }}
+        </span>
       </div>
     </div>
     <div class="flex items-center gap-1">
