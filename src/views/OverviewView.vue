@@ -13,8 +13,8 @@
       </div>
 
       <div class="subject-selector">
-        <label for="subjects">Select subject:</label>
-        <select id="subjects" v-model="selectedSubject" @change="handleSubjectChange">
+        <label for="subjects"></label>
+        <select id="subjects" v-model="selectedSubject" @change="handleSubjectChange" placeholder="Select subject">
           <option v-for="subject in subjects" :key="subject" :value="subject">
             {{ subject }}
           </option>
@@ -24,13 +24,13 @@
       <!-- 折线图 -->
       <div class="line-chart">
         <div class="chart-container">
-          <Chart type="line" :data="lineChartData" :options="lineChartOptions"  />
+          <Chart type="line" :data="lineChartData" :options="lineChartOptions" />
         </div>
       </div>
       <!-- 饼图 -->
       <div class="pie-chart-container">
         <div class="pie-chart">
-          <Chart type="pie" :data="pieChartData" :options="pieChartOptions"  />
+          <Chart type="pie" :data="pieChartData" :options="pieChartOptions" />
         </div>
       </div>
     </div>
@@ -41,8 +41,9 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Chart from 'primevue/chart';
-import axios from 'axios';
-
+import axios from '@/axios';
+import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore';
+import { storeToRefs } from 'pinia';
 // 导入路由
 const route = useRoute();
 const router = useRouter();
@@ -50,9 +51,32 @@ const router = useRouter();
 
 
 // 科目数据
-const subjects = ref(['CS', 'OS', 'CN', 'DS']);
-const selectedSubject = ref(route.query.subjects || 'CS'); // 默认选中的科目
+// const subjects = ref([]);
+const selectedSubject = ref(route.query.subjects || 'OS'); // 默认选中的科目
 
+
+const historyStore = useQuestionHistoryStore()
+const { subjects } = storeToRefs(historyStore)
+
+
+// 获取历史记录并提取科目列表
+const fetchSubjectsFromHistory = async () => {
+  try {
+
+    historyStore.fetch(); // 获取历史记录
+
+    // 使用 watch 来监听 subjects 的变化并设置默认选中的科目
+    watch(subjects, (newSubjects) => {
+      if (newSubjects.length > 0 && !selectedSubject.value) {
+        selectedSubject.value = newSubjects[0]; // 如果没有选择科目，则默认选择第一个科目
+      }
+    });
+
+    console.log('Available Subjects:', subjects.value);
+  } catch (error) {
+    console.error('Failed to fetch subjects:', error);
+  }
+};
 // 当前用户名
 const username = ref(route.query.username || 'cyyyx');
 
@@ -90,10 +114,10 @@ const lineChartOptions = ref({});
 const pieChartData = ref({});
 const pieChartOptions = ref({});
 
-// 获取图表数据
+
 const fetchChartData = async () => {
   try {
-    const response = await axios.get(`http://server.lzzzt.cn:8000/statistics`, { params: { username: username.value, subject: selectedSubject.value } });
+    const response = await axios.get('/statistics', { params: { username: username.value, subject: selectedSubject.value } });
     const dailyStatistics = response.data.data.daily_statistics;
 
     // 检查返回的数据结构是否符合预期
@@ -102,8 +126,37 @@ const fetchChartData = async () => {
       return;
     }
 
+    // 用于保存各科目的总刷题数
+    let subjectTotalAttempts = {};
+
+    const subjectsList = subjects.value; // 从 historyStore 中获取到科目列表
+   
+
+    // 遍历 dailyStatistics 并累计每个科目的刷题数
+    dailyStatistics.forEach(stat => {
+      stat.questions_on_date.forEach((attempt, index) => {
+        const subject = subjects.value[index]; // 假设科目按顺序与 questions_on_date 中的题目匹配
+        if (!subjectTotalAttempts[subject]) {
+          subjectTotalAttempts[subject] = 0;
+        }
+        subjectTotalAttempts[subject] += attempt; // 累加每个科目的刷题数
+      });
+    });
+   
+  
+
+    // 计算总刷题数
+    const totalAttempts = Object.values(subjectTotalAttempts).reduce((total, attempts) => total + attempts, 0);
+
+    // 计算各科目的刷题比例
+    const subjectPercentages = subjects.value.map(subject => {
+      const attempts = subjectTotalAttempts[subject] || 0;
+      return (attempts / totalAttempts) * 100; // 计算比例
+    });
+
+
     // 提取正确率数据并更新折线图
-    const accuracyData = dailyStatistics.map((entry) => entry.correct_rate || 0);
+    const accuracyData = dailyStatistics.map((entry) => entry.correct_rate * 100 || 0);
     lineChartData.value = {
       labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
       datasets: [
@@ -117,20 +170,17 @@ const fetchChartData = async () => {
       ],
     };
 
-    // 更新饼图数据
-    const correctData = subjects.value.map((subject, index) => {
-      const entry = dailyStatistics[index % dailyStatistics.length];
-      return {
-        subject: subject,
-        correctRate: entry ? entry.correct_rate : 0,
-      };
-    });
+    
     pieChartData.value = {
       labels: subjects.value,
+     
+
       datasets: [
         {
-          label: 'Error Rate (%)',
-          data: correctData.map((item) => 100 - item.correctRate), // 错题比例 = 100% - 正确率
+          label: 'Attempts (%)',
+
+          // data: topSubjects.map(subject => (1 - subject.correctRate) * 100), // 错题比例 = 100% - 正确率
+          data: subjectPercentages,
           backgroundColor: ['#FF8C97', '#5F91C4', '#FFB732', '#65B3A1'],
           hoverBackgroundColor: ['#FFB2C3', '#7DAFDC', '#FFCF6D', '#80C9B5'],
         },
@@ -173,7 +223,7 @@ const fetchChartData = async () => {
       plugins: {
         title: {
           display: true,
-          text: 'Percentage of Wrong Questions in Each Subject (%)', // 设置标题内容
+          text: 'Percentage of Attempts in Each Subject (%)', // 设置标题内容
           font: {
             size: 18,  // 设置标题的字体大小
             weight: 'bold',  // 设置字体的粗细
@@ -194,10 +244,11 @@ const fetchChartData = async () => {
 
 // 页面加载时初始化图表数据
 onMounted(() => {
-  fetchChartData();
+  fetchSubjectsFromHistory(); // 获取科目列表
+  fetchChartData(); // 获取图表数据
   const urlParams = new URLSearchParams(window.location.search);
   username.value = urlParams.get('username') || 'cyyyx';
-  subjects.value = new URLSearchParams(window.location.search).get('subject') || ['CS', 'OS', 'CN', 'DS'];
+  selectedSubject.value = urlParams.get('subjects') || subjects.value[0]; // 设置科目
   console.log('Selected Subject:', subjects.value);
 });
 
@@ -231,14 +282,17 @@ watch(selectedSubject, () => {
   display: flex;
   align-items: center;
   gap: 10px;
+
+  border-radius: 5px;
+
 }
 
 .chart-container {
-  
+
   flex: 1;
   padding: 20px;
   width: 50%;
-  
+
   height: 500%;
   justify-content: center;
   align-items: center;
@@ -248,21 +302,23 @@ watch(selectedSubject, () => {
   flex: 1;
   padding: 20px;
   width: 25%;
-  
+
   height: 25%;
   justify-content: center;
   align-items: center;
 }
+
 .line-chart {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height:50%;
+  height: 50%;
   gap: 20px;
 
 }
+
 .pie-chart-container {
   display: flex;
   flex-direction: column;
