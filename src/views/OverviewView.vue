@@ -5,20 +5,24 @@
     </div>
 
     <div class="chart-section">
-
-
       <!-- 分享按钮 -->
       <div class="share-button">
-        <button @click="shareContent">Share </button>
+        <button @click="shareContent">Share</button>
       </div>
 
       <div class="subject-selector">
         <label for="subjects"></label>
-        <select id="subjects" v-model="selectedSubject" @change="handleSubjectChange" placeholder="Select subject">
+        <Select
+          id="subjects"
+          v-model="selectedSubject"
+          @change="handleSubjectChange"
+          placeholder="Select subject"
+          :options="subjects"
+        >
           <option v-for="subject in subjects" :key="subject" :value="subject">
             {{ subject }}
           </option>
-        </select>
+        </Select>
       </div>
 
       <!-- 折线图 -->
@@ -38,52 +42,44 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import Chart from 'primevue/chart';
-import axios from '@/axios';
-import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore';
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import Chart from 'primevue/chart'
+import axios from '@/axios'
+import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
 
-import { storeToRefs } from 'pinia';
+import { storeToRefs } from 'pinia'
 // 导入路由
-const route = useRoute();
-const router = useRouter();
-
-
+const route = useRoute()
+const router = useRouter()
 
 // 科目数据
 // const subjects = ref([]);
-const selectedSubject = ref(route.query.subjects || 'OS'); // 默认选中的科目
-
+const selectedSubject = ref(route.query.subjects || 'OS') // 默认选中的科目
 
 const historyStore = useQuestionHistoryStore()
 const { subjects } = storeToRefs(historyStore)
 
-
 // 获取历史记录并提取科目列表
 const fetchSubjectsFromHistory = async () => {
   try {
-
-    historyStore.fetch(); // 获取历史记录
+    historyStore.fetch() // 获取历史记录
 
     // 使用 watch 来监听 subjects 的变化并设置默认选中的科目
     watch(subjects, (newSubjects) => {
       if (newSubjects.length > 0 && !selectedSubject.value) {
-        selectedSubject.value = newSubjects[0]; // 如果没有选择科目，则默认选择第一个科目
+        selectedSubject.value = newSubjects[0] // 如果没有选择科目，则默认选择第一个科目
       }
-    });
+    })
 
-
-
-    console.log('Available Subjects:', subjects.value);
+    console.log('Available Subjects:', subjects.value)
   } catch (error) {
-    console.error('Failed to fetch subjects:', error);
+    console.error('Failed to fetch subjects:', error)
   }
-};
+}
 // 当前用户名
-const username = ref(localStorage.getItem('username') || 'wwwlt');
+const username = ref(localStorage.getItem('username') || 'wwwlt')
 // console.log('Username:', localStorage.getItem('username'))
-
 
 // 处理科目选择事件
 const handleSubjectChange = () => {
@@ -91,97 +87,100 @@ const handleSubjectChange = () => {
   router.push({
     name: 'overview', // 目标路由的名称
     query: {
-      subjects: selectedSubject.value,  // 传递选择的科目
-      username: username.value // 传递用户名
-    }
-  });
-};
+      subjects: selectedSubject.value, // 传递选择的科目
+      username: username.value, // 传递用户名
+    },
+  })
+}
 
 // 分享功能
 const shareContent = () => {
   if (navigator.share) {
-    navigator.share({
-      title: 'Share My Statistics',
-      text: `Check out my stats for ${selectedSubject.value}!`,
-      url: window.location.href, // 当前页面的 URL
-    })
+    navigator
+      .share({
+        title: 'Share My Statistics',
+        text: `Check out my stats for ${selectedSubject.value}!`,
+        url: window.location.href, // 当前页面的 URL
+      })
       .then(() => console.log('Share was successful!'))
-      .catch((error) => console.log('Sharing failed', error));
+      .catch((error) => console.log('Sharing failed', error))
   } else {
     // 如果浏览器不支持原生分享API，可以提供一个链接或者其他方式分享
-    alert('Sharing is not supported in your browser. You can copy the URL and share manually.');
+    alert('Sharing is not supported in your browser. You can copy the URL and share manually.')
   }
-};
+}
 
 // 用于保存图表的数据和选项
-const lineChartData = ref({});
-const lineChartOptions = ref({});
-const pieChartData = ref({});
-const pieChartOptions = ref({});
-
+const lineChartData = ref({})
+const lineChartOptions = ref({})
+const pieChartData = ref({})
+const pieChartOptions = ref({})
 
 const fetchChartData = async () => {
   try {
-    const response = await axios.get('/statistics', { params: { username: username.value, subject: selectedSubject.value } });
-    const dailyStatistics = response.data.data.daily_statistics;
+    const response = await axios.get('/statistics', {
+      params: {
+        username: username.value,
+        subject: selectedSubject.value,
+      },
+    })
+    const dailyStatistics = response.data.data.daily_statistics
 
     // 检查返回的数据结构是否符合预期
     if (dailyStatistics.length === 0) {
-      console.warn('No daily statistics data available.');
-      return;
+      console.warn('No daily statistics data available.')
+      return
     }
 
     // 用于保存各科目的总刷题数
-    let subjectTotalAttempts = {};
-
+    const subjectTotalAttempts = {}
 
     // 假设 subjects 是一个响应式引用（例如 ref）
     for (let i = 0; i < subjects.value.length; i++) {
-      const subject = subjects.value[i];
+      const subject = subjects.value[i]
 
       try {
         // 发起请求获取该科目的刷题总数
         const response = await axios.get('/statistics', {
-          params: { subject: subject, username: username.value }
-        });
-        const dailyStatistics1 = response.data.data.daily_statistics;
-        console.log('Daily Statistics for', subject, ':', dailyStatistics1);
+          params: { subject: subject, username: username.value },
+        })
+        const dailyStatistics1 = response.data.data.daily_statistics
+        console.log('Daily Statistics for', subject, ':', dailyStatistics1)
 
         // 获取该科目的 total_attempts
         const totalAttempts = dailyStatistics1.reduce((total, stat) => {
-          return total + stat.total_attempts; // 累加每个日期的刷题数
-        }, 0);
+          return total + stat.total_attempts // 累加每个日期的刷题数
+        }, 0)
 
         // 如果该科目没有记录，则初始化为 0
         if (!subjectTotalAttempts[subject]) {
-          subjectTotalAttempts[subject] = 0;
+          subjectTotalAttempts[subject] = 0
         }
 
         // 累加每个科目的 total_attempts
-        subjectTotalAttempts[subject] += totalAttempts;
-
+        subjectTotalAttempts[subject] += totalAttempts
       } catch (error) {
-        console.error(`Failed to fetch data for subject ${subject}:`, error);
+        console.error(`Failed to fetch data for subject ${subject}:`, error)
       }
     }
 
     // 打印累加后的结果
-    console.log(subjectTotalAttempts);
+    console.log(subjectTotalAttempts)
 
     // 计算总刷题数
-    const totalAttempts = Object.values(subjectTotalAttempts).reduce((total, attempts) => total + attempts, 0);
-    console.log('Total Attempts Across All Subjects:', totalAttempts);
+    const totalAttempts = Object.values(subjectTotalAttempts).reduce(
+      (total, attempts) => total + attempts,
+      0,
+    )
+    console.log('Total Attempts Across All Subjects:', totalAttempts)
     // 计算各科目的刷题比例
-    const subjectPercentages = subjects.value.map(subject => {
-      const attempts = subjectTotalAttempts[subject] || 0;
-      return (attempts / totalAttempts) * 100; // 计算比例
-    });
-
-
-
+    const subjectPercentages = subjects.value.map((subject) => {
+      const attempts = subjectTotalAttempts[subject] || 0
+      return (attempts / totalAttempts) * 100 // 计算比例
+    })
 
     // 提取正确率数据并更新折线图
-    const accuracyData = dailyStatistics.map((entry) => entry.correct_rate * 100 || 0);
+    const accuracyData = dailyStatistics.map((entry) => entry.correct_rate * 100 || 0)
     lineChartData.value = {
       labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
       datasets: [
@@ -193,14 +192,10 @@ const fetchChartData = async () => {
           tension: 0.4,
         },
       ],
-    };
-
-
+    }
 
     pieChartData.value = {
       labels: subjects.value,
-
-
 
       datasets: [
         {
@@ -212,7 +207,7 @@ const fetchChartData = async () => {
           hoverBackgroundColor: ['#FFB2C3', '#7DAFDC', '#FFCF6D', '#80C9B5'],
         },
       ],
-    };
+    }
 
     // 更新图表选项
     lineChartOptions.value = {
@@ -227,11 +222,11 @@ const fetchChartData = async () => {
             display: true,
             text: 'Accuracy (%) Of ' + selectedSubject.value + ' During the Last 7 Days',
             font: {
-              size: 18,  // 设置标题的字体大小
-              weight: 'bold',  // 设置字体的粗细
+              size: 18, // 设置标题的字体大小
+              weight: 'bold', // 设置字体的粗细
             },
             padding: {
-              bottom: 20,  // 设置标题下方的间距
+              bottom: 20, // 设置标题下方的间距
             },
           },
         },
@@ -244,7 +239,7 @@ const fetchChartData = async () => {
           max: 100,
         },
       },
-    };
+    }
 
     pieChartOptions.value = {
       plugins: {
@@ -252,41 +247,39 @@ const fetchChartData = async () => {
           display: true,
           text: 'Percentage of Attempts in Each Subject (%)', // 设置标题内容
           font: {
-            size: 18,  // 设置标题的字体大小
-            weight: 'bold',  // 设置字体的粗细
+            size: 18, // 设置标题的字体大小
+            weight: 'bold', // 设置字体的粗细
           },
           padding: {
-            bottom: 20,  // 设置标题下方的间距
+            bottom: 20, // 设置标题下方的间距
           },
         },
         legend: {
           position: 'top',
         },
       },
-    };
+    }
   } catch (error) {
-    console.error('Failed to fetch chart data:', error);
+    console.error('Failed to fetch chart data:', error)
   }
-};
+}
 
 // 页面加载时初始化图表数据
 onMounted(() => {
-  fetchSubjectsFromHistory(); // 获取科目列表
-  fetchChartData(); // 获取图表数据
-  const urlParams = new URLSearchParams(window.location.search);
+  fetchSubjectsFromHistory() // 获取科目列表
+  fetchChartData() // 获取图表数据
+  const urlParams = new URLSearchParams(window.location.search)
   // username.value = urlParams.get('username') || 'cyyyx';
-  selectedSubject.value = urlParams.get('subjects') || subjects.value[0]; // 设置科目
-  console.log('Username from query:', route.query.username);
-});
+  selectedSubject.value = urlParams.get('subjects') || subjects.value[0] // 设置科目
+  console.log('Username from query:', route.query.username)
+})
 
 // 监听科目变化，更新图表
 watch(selectedSubject, () => {
-  fetchChartData();
-});
+  fetchChartData()
+})
 
-// 
-
-
+//
 </script>
 
 <style scoped>
@@ -315,11 +308,9 @@ watch(selectedSubject, () => {
   gap: 10px;
 
   border-radius: 5px;
-
 }
 
 .chart-container {
-
   flex: 1;
   padding: 20px;
   width: 50%;
@@ -347,7 +338,6 @@ watch(selectedSubject, () => {
   width: 100%;
   height: 50%;
   gap: 20px;
-
 }
 
 .pie-chart-container {
@@ -358,11 +348,7 @@ watch(selectedSubject, () => {
   width: 100%;
   height: 50%;
   gap: 20px;
-
 }
-
-
-
 
 canvas {
   width: 100%;
@@ -374,7 +360,6 @@ canvas {
   position: absolute;
   top: 5px;
   right: 5px;
-
 }
 
 .share-button {
@@ -382,10 +367,7 @@ canvas {
   position: absolute;
   bottom: 5px;
   right: 5px;
-
-
 }
-
 
 /* 亮模式下的按钮样式 */
 button {
@@ -430,6 +412,5 @@ button:focus {
   background-color: #28a76a;
   /* 分享按钮的绿色背景色 */
   color: white;
-
 }
 </style>
