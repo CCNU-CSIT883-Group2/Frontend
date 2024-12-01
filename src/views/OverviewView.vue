@@ -43,6 +43,7 @@ import { useRoute, useRouter } from 'vue-router';
 import Chart from 'primevue/chart';
 import axios from '@/axios';
 import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore';
+
 import { storeToRefs } from 'pinia';
 // 导入路由
 const route = useRoute();
@@ -72,13 +73,17 @@ const fetchSubjectsFromHistory = async () => {
       }
     });
 
+
+
     console.log('Available Subjects:', subjects.value);
   } catch (error) {
     console.error('Failed to fetch subjects:', error);
   }
 };
 // 当前用户名
-const username = ref(route.query.username || 'cyyyx');
+const username = ref(localStorage.getItem('username') || 'wwwlt');
+// console.log('Username:', localStorage.getItem('username'))
+
 
 // 处理科目选择事件
 const handleSubjectChange = () => {
@@ -129,30 +134,50 @@ const fetchChartData = async () => {
     // 用于保存各科目的总刷题数
     let subjectTotalAttempts = {};
 
-    const subjectsList = subjects.value; // 从 historyStore 中获取到科目列表
 
+    // 假设 subjects 是一个响应式引用（例如 ref）
+    for (let i = 0; i < subjects.value.length; i++) {
+      const subject = subjects.value[i];
 
-    // 遍历 dailyStatistics 并累计每个科目的刷题数
-    dailyStatistics.forEach(stat => {
-      stat.questions_on_date.forEach((attempt, index) => {
-        const subject = subjects.value[index]; // 假设科目按顺序与 questions_on_date 中的题目匹配
+      try {
+        // 发起请求获取该科目的刷题总数
+        const response = await axios.get('/statistics', {
+          params: { subject: subject, username: username.value }
+        });
+        const dailyStatistics1 = response.data.data.daily_statistics;
+        console.log('Daily Statistics for', subject, ':', dailyStatistics1);
+
+        // 获取该科目的 total_attempts
+        const totalAttempts = dailyStatistics1.reduce((total, stat) => {
+          return total + stat.total_attempts; // 累加每个日期的刷题数
+        }, 0);
+
+        // 如果该科目没有记录，则初始化为 0
         if (!subjectTotalAttempts[subject]) {
           subjectTotalAttempts[subject] = 0;
         }
-        subjectTotalAttempts[subject] += attempt; // 累加每个科目的刷题数
-      });
-    });
 
+        // 累加每个科目的 total_attempts
+        subjectTotalAttempts[subject] += totalAttempts;
 
+      } catch (error) {
+        console.error(`Failed to fetch data for subject ${subject}:`, error);
+      }
+    }
+
+    // 打印累加后的结果
+    console.log(subjectTotalAttempts);
 
     // 计算总刷题数
     const totalAttempts = Object.values(subjectTotalAttempts).reduce((total, attempts) => total + attempts, 0);
-
+    console.log('Total Attempts Across All Subjects:', totalAttempts);
     // 计算各科目的刷题比例
     const subjectPercentages = subjects.value.map(subject => {
       const attempts = subjectTotalAttempts[subject] || 0;
       return (attempts / totalAttempts) * 100; // 计算比例
     });
+
+
 
 
     // 提取正确率数据并更新折线图
@@ -171,8 +196,10 @@ const fetchChartData = async () => {
     };
 
 
+
     pieChartData.value = {
       labels: subjects.value,
+
 
 
       datasets: [
@@ -247,15 +274,19 @@ onMounted(() => {
   fetchSubjectsFromHistory(); // 获取科目列表
   fetchChartData(); // 获取图表数据
   const urlParams = new URLSearchParams(window.location.search);
-  username.value = urlParams.get('username') || 'cyyyx';
+  // username.value = urlParams.get('username') || 'cyyyx';
   selectedSubject.value = urlParams.get('subjects') || subjects.value[0]; // 设置科目
-  console.log('Selected Subject:', subjects.value);
+  console.log('Username from query:', route.query.username);
 });
 
 // 监听科目变化，更新图表
 watch(selectedSubject, () => {
   fetchChartData();
 });
+
+// 
+
+
 </script>
 
 <style scoped>
