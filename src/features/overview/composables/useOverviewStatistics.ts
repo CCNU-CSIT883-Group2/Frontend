@@ -1,14 +1,15 @@
 import axios from '@/axios'
-import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
+import { ROUTE_NAMES } from '@/router'
+import { useQuestionHistoryStore } from '@/stores/questionHistoryStore'
+import { useUserStore } from '@/stores/userStore'
 import type { DailyStatistics, Response, StatisticsData } from '@/types'
 import type { ChartData, ChartOptions } from 'chart.js'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
-import type { ComputedRef, Ref } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-const PIE_COLORS = ['#FF8C97', '#5F91C4', '#FFB732', '#65B3A1', '#845EC2', '#2C73D2']
-const PIE_HOVER_COLORS = ['#FFB2C3', '#7DAFDC', '#FFCF6D', '#80C9B5', '#9B7BCE', '#4C8DDD']
+const PIE_COLORS = ['#FF8C97', '#5F91C4', '#FFB732', '#65B3A1', '#845EC2', '#2C73D2'] as const
+const PIE_HOVER_COLORS = ['#FFB2C3', '#7DAFDC', '#FFCF6D', '#80C9B5', '#9B7BCE', '#4C8DDD'] as const
 
 interface UseOverviewStatisticsResult {
   selectedSubject: Ref<string>
@@ -26,29 +27,29 @@ interface UseOverviewStatisticsResult {
 const sumAttempts = (dailyStatistics: DailyStatistics[]) =>
   dailyStatistics.reduce((total, item) => total + item.total_attempts, 0)
 
+const getSubjectFromQuery = (query: Record<string, unknown>) =>
+  typeof query.subject === 'string' ? query.subject : ''
+
 export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const route = useRoute()
   const router = useRouter()
 
   const historyStore = useQuestionHistoryStore()
+  const userStore = useUserStore()
   const { subjects } = storeToRefs(historyStore)
+  const { name: usernameRef } = storeToRefs(userStore)
 
-  const username = ref(localStorage.getItem('username') ?? '')
   const selectedSubject = ref('')
   const isLoading = ref(false)
   const errorMessage = ref('')
   const latestRequestId = ref(0)
 
-  const lineChartData = ref<ChartData<'line'>>({ labels: [], datasets: [] })
-  const lineChartOptions = ref<ChartOptions<'line'>>({})
+  const lineChartData = shallowRef<ChartData<'line'>>({ labels: [], datasets: [] })
+  const lineChartOptions = shallowRef<ChartOptions<'line'>>({})
+  const pieChartData = shallowRef<ChartData<'pie', number[], string>>({ labels: [], datasets: [] })
+  const pieChartOptions = shallowRef<ChartOptions<'pie'>>({})
 
-  const pieChartData = ref<ChartData<'pie', number[], string>>({ labels: [], datasets: [] })
-  const pieChartOptions = ref<ChartOptions<'pie'>>({})
-
-  const routeSubject = computed(() =>
-    typeof route.query.subjects === 'string' ? route.query.subjects : '',
-  )
-
+  const routeSubject = computed(() => getSubjectFromQuery(route.query))
   const hasSubjectOptions = computed(() => subjects.value.length > 0)
 
   const ensureValidSubject = () => {
@@ -69,19 +70,24 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   }
 
   const syncRouteSubject = (subject: string) => {
+    if (!subject) return
+
+    const currentRouteSubject = getSubjectFromQuery(route.query)
     if (
-      route.name === 'overview' &&
-      route.query.subjects === subject &&
-      route.query.username === username.value
+      route.name === ROUTE_NAMES.overview &&
+      currentRouteSubject === subject &&
+      route.query.username === usernameRef.value
     ) {
       return
     }
 
     void router.replace({
-      name: 'overview',
+      name: ROUTE_NAMES.overview,
+      // Keep route query explicit for deep-linking and sharing.
       query: {
-        subjects: subject,
-        username: username.value,
+        ...route.query,
+        subject,
+        username: usernameRef.value,
       },
     })
   }
@@ -134,7 +140,11 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
 
   const updatePieChart = (subjectAttemptsMap: Record<string, number>) => {
     const labels = [...subjects.value]
-    const totalAttempts = Object.values(subjectAttemptsMap).reduce((sum, attempts) => sum + attempts, 0)
+    const totalAttempts = Object.values(subjectAttemptsMap).reduce(
+      (sum, attempts) => sum + attempts,
+      0,
+    )
+
     const percentages = labels.map((subject) => {
       const attempts = subjectAttemptsMap[subject] ?? 0
       return totalAttempts > 0 ? (attempts / totalAttempts) * 100 : 0
@@ -147,7 +157,9 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
           label: 'Attempts (%)',
           data: percentages,
           backgroundColor: labels.map((_, index) => PIE_COLORS[index % PIE_COLORS.length]),
-          hoverBackgroundColor: labels.map((_, index) => PIE_HOVER_COLORS[index % PIE_HOVER_COLORS.length]),
+          hoverBackgroundColor: labels.map(
+            (_, index) => PIE_HOVER_COLORS[index % PIE_HOVER_COLORS.length],
+          ),
         },
       ],
     }
@@ -175,7 +187,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const fetchSubjectStatistics = async (subject: string) => {
     const response = await axios.get<Response<StatisticsData>>('/statistics', {
       params: {
-        username: username.value,
+        username: usernameRef.value,
         subject,
       },
     })
@@ -184,7 +196,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   }
 
   const refreshCharts = async () => {
-    if (!username.value || !selectedSubject.value || subjects.value.length === 0) {
+    if (!usernameRef.value || !selectedSubject.value || subjects.value.length === 0) {
       return
     }
 
@@ -217,6 +229,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
       if (requestId !== latestRequestId.value) {
         return
       }
+
       errorMessage.value = 'Failed to load statistics. Please try again later.'
     } finally {
       if (requestId === latestRequestId.value) {
@@ -238,7 +251,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
           url: window.location.href,
         })
       } catch {
-        // user cancelled
+        // User cancelled.
       }
       return
     }
@@ -254,9 +267,10 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   watch(subjects, ensureValidSubject)
 
   watch(
-    () => route.query.subjects,
-    (querySubject) => {
-      if (typeof querySubject !== 'string') return
+    () => route.query,
+    (query) => {
+      const querySubject = getSubjectFromQuery(query)
+      if (!querySubject) return
       if (querySubject !== selectedSubject.value) {
         selectedSubject.value = querySubject
       }
@@ -266,12 +280,13 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
 
   watch(selectedSubject, (subject) => {
     if (!subject) return
+
     syncRouteSubject(subject)
     void refreshCharts()
   })
 
   onMounted(async () => {
-    const error = await historyStore.fetch()
+    const error = await historyStore.fetchHistories()
     if (error) {
       errorMessage.value = error
       return

@@ -1,15 +1,26 @@
 import axios from 'axios'
-import { useUserStore } from '@/stores/user'
+import { API_BASE_URL } from '@/config'
+import { useUserStore } from '@/stores/userStore'
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_BASE_URL as string,
+  baseURL: API_BASE_URL,
 })
 
 const PUBLIC_ENDPOINTS = new Set(['/login', '/register'])
+const isPublicEndpoint = (url?: string) => {
+  if (!url) return false
+
+  try {
+    const normalizedUrl = new URL(url, axiosInstance.defaults.baseURL)
+    return PUBLIC_ENDPOINTS.has(normalizedUrl.pathname)
+  } catch {
+    return PUBLIC_ENDPOINTS.has(url)
+  }
+}
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    if (config.url && PUBLIC_ENDPOINTS.has(config.url)) {
+    if (isPublicEndpoint(config.url)) {
       return config
     }
 
@@ -18,6 +29,7 @@ axiosInstance.interceptors.request.use(
 
     if (token) {
       config.headers = config.headers ?? {}
+      config.headers.Authorization = token
       config.headers.AUTHORIZATION = token
     }
 

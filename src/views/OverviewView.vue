@@ -30,9 +30,9 @@
 </template>
 
 <script setup lang="ts">
-import OverviewChartsPanel from '@/components/overview/OverviewChartsPanel.vue'
-import OverviewToolbar from '@/components/overview/OverviewToolbar.vue'
-import { useOverviewStatistics } from '@/composables/useOverviewStatistics'
+import OverviewChartsPanel from '@/features/overview/components/OverviewChartsPanel.vue'
+import OverviewToolbar from '@/features/overview/components/OverviewToolbar.vue'
+import { useOverviewStatistics } from '@/features/overview/composables/useOverviewStatistics'
 
 const {
   selectedSubject,

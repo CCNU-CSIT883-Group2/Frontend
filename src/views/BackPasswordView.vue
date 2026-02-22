@@ -15,7 +15,9 @@
           />
         </svg>
 
-        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Password Recovery</div>
+        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">
+          Password Recovery
+        </div>
         <span class="text-surface-600 dark:text-surface-200 font-medium leading-normal">
           Recover your account with verification code
         </span>
@@ -57,7 +59,7 @@
             <InputText
               id="new-password"
               v-model="newPassword"
-              :type="showNewPassword ? 'text' : 'password'"
+              :type="isNewPasswordVisible ? 'text' : 'password'"
               variant="filled"
               class="w-full"
             />
@@ -69,7 +71,7 @@
               icon="pi pi-eye"
               severity="secondary"
               outlined
-              @click="showNewPassword = !showNewPassword"
+              @click="isNewPasswordVisible = !isNewPasswordVisible"
             />
             <span>Password strength: {{ passwordStrength }}</span>
           </div>
@@ -78,7 +80,7 @@
             <InputText
               id="confirm-password"
               v-model="confirmPassword"
-              :type="showConfirmPassword ? 'text' : 'password'"
+              :type="isConfirmPasswordVisible ? 'text' : 'password'"
               variant="filled"
               class="w-full"
             />
@@ -90,7 +92,7 @@
               icon="pi pi-eye"
               severity="secondary"
               outlined
-              @click="showConfirmPassword = !showConfirmPassword"
+              @click="isConfirmPasswordVisible = !isConfirmPasswordVisible"
             />
             <span>Toggle confirm password visibility</span>
           </div>
@@ -102,13 +104,16 @@
           <Button label="Confirm Reset" class="w-full" @click="confirmModification" />
         </template>
 
-        <Message v-if="message" :severity="messageSeverity" :closable="false">{{ message }}</Message>
+        <Message v-if="statusMessage" :severity="statusMessageSeverity" :closable="false">{{
+          statusMessage
+        }}</Message>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ROUTE_NAMES } from '@/router'
 import Button from 'primevue/button'
 import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
@@ -123,17 +128,19 @@ const isSending = ref(false)
 const isRecovering = ref(true)
 const newPassword = ref('')
 const confirmPassword = ref('')
-const showNewPassword = ref(false)
-const showConfirmPassword = ref(false)
-const message = ref('')
-const messageSeverity = ref<'success' | 'error' | 'info'>('info')
+const isNewPasswordVisible = ref(false)
+const isConfirmPasswordVisible = ref(false)
+const statusMessage = ref('')
+const statusMessageSeverity = ref<'success' | 'error' | 'info'>('info')
 
 const router = useRouter()
 
-let countdownTimer: number | null = null
+let countdownTimer: ReturnType<typeof setInterval> | null = null
+let redirectTimer: ReturnType<typeof setTimeout> | null = null
 
 const passwordMismatch = computed(
-  () => !!newPassword.value && !!confirmPassword.value && newPassword.value !== confirmPassword.value,
+  () =>
+    !!newPassword.value && !!confirmPassword.value && newPassword.value !== confirmPassword.value,
 )
 
 const passwordStrength = computed(() => {
@@ -143,7 +150,7 @@ const passwordStrength = computed(() => {
 })
 
 const clearMessage = () => {
-  message.value = ''
+  statusMessage.value = ''
 }
 
 const startCountdown = () => {
@@ -171,21 +178,21 @@ const sendVerificationCode = () => {
   startCountdown()
 
   // Mock behavior only: backend integration is intentionally out of scope.
-  messageSeverity.value = 'success'
-  message.value = `Verification code sent to ${email.value.trim()}`
+  statusMessageSeverity.value = 'success'
+  statusMessage.value = `Verification code sent to ${email.value.trim()}`
 }
 
 const verifyCode = () => {
   clearMessage()
 
   if (verificationCode.value.trim() !== '123456') {
-    messageSeverity.value = 'error'
-    message.value = 'Invalid verification code.'
+    statusMessageSeverity.value = 'error'
+    statusMessage.value = 'Invalid verification code.'
     return
   }
 
-  messageSeverity.value = 'success'
-  message.value = 'Verification succeeded. Please set a new password.'
+  statusMessageSeverity.value = 'success'
+  statusMessage.value = 'Verification succeeded. Please set a new password.'
   isRecovering.value = false
 }
 
@@ -193,29 +200,33 @@ const confirmModification = () => {
   clearMessage()
 
   if (passwordMismatch.value) {
-    messageSeverity.value = 'error'
-    message.value = 'Passwords do not match.'
+    statusMessageSeverity.value = 'error'
+    statusMessage.value = 'Passwords do not match.'
     return
   }
 
   if (!newPassword.value) {
-    messageSeverity.value = 'error'
-    message.value = 'Please enter a new password.'
+    statusMessageSeverity.value = 'error'
+    statusMessage.value = 'Please enter a new password.'
     return
   }
 
   // Mock behavior only: backend integration is intentionally out of scope.
-  messageSeverity.value = 'success'
-  message.value = 'Password reset completed. Redirecting to login...'
+  statusMessageSeverity.value = 'success'
+  statusMessage.value = 'Password reset completed. Redirecting to login...'
 
-  setTimeout(() => {
-    void router.push({ name: 'login' })
+  redirectTimer = setTimeout(() => {
+    void router.push({ name: ROUTE_NAMES.login })
   }, 500)
 }
 
 onUnmounted(() => {
   if (countdownTimer) {
     window.clearInterval(countdownTimer)
+  }
+
+  if (redirectTimer) {
+    window.clearTimeout(redirectTimer)
   }
 })
 </script>

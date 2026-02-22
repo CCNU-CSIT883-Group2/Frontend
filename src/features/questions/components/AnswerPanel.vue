@@ -1,12 +1,12 @@
 <template>
   <div class="flex flex-1">
     <div class="flex justify-between gap-2 flex-1">
-      <question-list
-        class="flex-1"
-        :questions="questionsList"
-        v-model:scroll-to="scrollToIndex"
-        v-model:answer-saved="answered"
+      <QuestionList
         v-model:attempts="attempts"
+        v-model:is-answer-saved="isAnswerSaved"
+        v-model:scroll-to="scrollToIndex"
+        :questions="questions"
+        class="flex-1"
       />
 
       <div class="flex-none w-72 p-2 border rounded-2xl flex flex-col gap-2 border-color">
@@ -15,12 +15,12 @@
 
           <div class="gap-4 grid grid-cols-4 px-4">
             <Button
-              v-for="(_, index) in questionsList"
+              v-for="(_, index) in questions"
               :key="index"
               :variant="attempts[index]?.length === 0 ? 'outlined' : undefined"
-              severity="secondary"
               class="w-12 h-12"
-              @click="scrollTo(index)"
+              severity="secondary"
+              @click="scrollToQuestion(index)"
             >
               <template #default>
                 <div class="flex items-center">
@@ -36,22 +36,24 @@
 </template>
 
 <script setup lang="ts">
-import QuestionList from '@/components/QuestionList.vue'
-import { useAttempts } from '@/hooks/useAttempts'
-import { useQuestions } from '@/hooks/useQuestions'
+import QuestionList from '@/features/questions/components/QuestionList.vue'
+import { useAttempts } from '@/features/questions/composables/useAttempts'
+import { useQuestions } from '@/features/questions/composables/useQuestions'
 import type { Question } from '@/types'
 import { onUnmounted, ref, watch } from 'vue'
 
-const props = defineProps<{
+interface AnswerPanelProps {
   historyId: number
-}>()
+}
 
-const questionsList = ref<Question[]>([])
+const props = defineProps<AnswerPanelProps>()
+
+const questions = ref<Question[]>([])
 const attempts = ref<number[][]>([])
-const answered = ref(false)
+const isAnswerSaved = ref(false)
 
 const {
-  questions,
+  questions: fetchedQuestions,
   isFetching: isFetchingQuestions,
   cancel: cancelFetchingQuestions,
 } = useQuestions(props.historyId)
@@ -63,29 +65,30 @@ const {
 } = useAttempts(props.historyId)
 
 watch(
-  isFetchingQuestions,
-  (loading) => {
-    if (loading) return
-    questionsList.value = questions.value
-    attempts.value = questions.value.map(() => [])
+  [isFetchingQuestions, fetchedQuestions],
+  ([isQuestionsLoading]) => {
+    if (isQuestionsLoading) return
+
+    questions.value = fetchedQuestions.value
+    attempts.value = fetchedQuestions.value.map(() => [])
   },
   { immediate: true },
 )
 
 watch(
-  [isFetchingQuestions, isFetchingAttempts],
-  ([questionsLoading, attemptsLoading]) => {
-    if (questionsLoading || attemptsLoading) return
+  [isFetchingQuestions, isFetchingAttempts, fetchedAttempts],
+  ([isQuestionsLoading, isAttemptsLoading]) => {
+    if (isQuestionsLoading || isAttemptsLoading) return
 
     const attemptsByQuestionId = new Map<number, number[]>()
     fetchedAttempts.value.forEach((attemptItem) => {
       attemptsByQuestionId.set(attemptItem.question_id, attemptItem.user_answers)
     })
 
-    attempts.value = questionsList.value.map(
+    attempts.value = questions.value.map(
       (question) => attemptsByQuestionId.get(question.question_id) ?? [],
     )
-    answered.value = attempts.value.every((attempt) => attempt.length > 0)
+    isAnswerSaved.value = attempts.value.every((attempt) => attempt.length > 0)
   },
   { immediate: true },
 )
@@ -96,7 +99,7 @@ onUnmounted(() => {
 })
 
 const scrollToIndex = ref(-1)
-const scrollTo = (index: number) => {
-  scrollToIndex.value = index
+const scrollToQuestion = (questionIndex: number) => {
+  scrollToIndex.value = questionIndex
 }
 </script>

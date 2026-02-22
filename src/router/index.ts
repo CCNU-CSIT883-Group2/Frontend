@@ -1,49 +1,54 @@
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/stores/userStore'
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
+
+export const ROUTE_NAMES = {
+  entry: 'entry',
+  register: 'register',
+  login: 'login',
+  overview: 'overview',
+  questions: 'questions',
+  profile: 'profile',
+  backPassword: 'backpassword',
+} as const
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'entry',
-    component: () => import('@/views/EntryView.vue'),
+    name: ROUTE_NAMES.entry,
+    component: () => import('@/views/LandingView.vue'),
   },
   {
     path: '/register',
-    name: 'register',
+    name: ROUTE_NAMES.register,
     component: () => import('@/views/RegisterView.vue'),
   },
   {
     path: '/login',
-    name: 'login',
+    name: ROUTE_NAMES.login,
     component: () => import('@/views/LoginView.vue'),
   },
   {
     path: '/overview',
-    name: 'overview',
+    name: ROUTE_NAMES.overview,
     meta: { requiresAuth: true },
     component: () => import('@/views/OverviewView.vue'),
   },
   {
     path: '/questions',
-    name: 'questions',
+    name: ROUTE_NAMES.questions,
     meta: { requiresAuth: true },
     component: () => import('@/views/QuestionsView.vue'),
   },
   {
     path: '/profile',
-    name: 'profile',
+    name: ROUTE_NAMES.profile,
     meta: { requiresAuth: true },
-    component: () => import('@/views/UserProfileView.vue'),
+    component: () => import('@/views/ProfileView.vue'),
   },
   {
     path: '/backpassword',
-    name: 'backpassword',
-    component: () => import('@/views/BackPasswardView.vue'),
-  },
-  // Keep compatibility for old typo route.
-  {
-    path: '/backpassward',
-    redirect: { name: 'backpassword' },
+    name: ROUTE_NAMES.backPassword,
+    component: () => import('@/views/BackPasswordView.vue'),
   },
 ]
 
@@ -63,7 +68,7 @@ router.beforeEach((to) => {
   }
 
   return {
-    name: 'login',
+    name: ROUTE_NAMES.login,
     query: { redirect: to.fullPath },
   }
 })

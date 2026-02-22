@@ -5,8 +5,10 @@ import type {
   QuestionsCreateStreamStart,
 } from '@/types'
 
+type StreamEventName = 'start' | 'progress' | 'done' | 'message'
+
 interface ParsedSseEvent {
-  eventName: string
+  eventName: StreamEventName
   payload: unknown
 }
 
@@ -20,9 +22,20 @@ interface StreamQuestionCreationOptions {
   onDone?: (payload: QuestionsCreateStreamDonePayload) => void
 }
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const parseStreamEventName = (value: string): StreamEventName => {
+  if (value === 'start' || value === 'progress' || value === 'done') {
+    return value
+  }
+
+  return 'message'
+}
+
 function parseSseBlock(block: string): ParsedSseEvent | null {
   const lines = block.split('\n')
-  let eventName = 'message'
+  let eventName: StreamEventName = 'message'
   const dataLines: string[] = []
 
   for (const line of lines) {
@@ -30,7 +43,7 @@ function parseSseBlock(block: string): ParsedSseEvent | null {
     if (!normalized) continue
 
     if (normalized.startsWith('event:')) {
-      eventName = normalized.slice(6).trim()
+      eventName = parseStreamEventName(normalized.slice(6).trim())
       continue
     }
 
@@ -49,6 +62,33 @@ function parseSseBlock(block: string): ParsedSseEvent | null {
   }
 }
 
+const isStartPayload = (payload: unknown): payload is QuestionsCreateStreamStart => {
+  if (!isObject(payload)) return false
+  return typeof payload.total === 'number'
+}
+
+const isProgressPayload = (payload: unknown): payload is QuestionsCreateStreamProgress => {
+  if (!isObject(payload)) return false
+  return (
+    typeof payload.current === 'number' &&
+    typeof payload.percent === 'number' &&
+    typeof payload.total === 'number'
+  )
+}
+
+const isDonePayload = (payload: unknown): payload is QuestionsCreateStreamDonePayload => {
+  if (!isObject(payload)) return false
+
+  return (
+    isObject(payload.history) &&
+    typeof payload.number === 'number' &&
+    Array.isArray(payload.questions) &&
+    typeof payload.subject === 'string' &&
+    typeof payload.tag === 'string' &&
+    typeof payload.type === 'string'
+  )
+}
+
 export async function streamQuestionCreation({
   baseUrl,
   token,
@@ -57,7 +97,7 @@ export async function streamQuestionCreation({
   onStart,
   onProgress,
   onDone,
-}: StreamQuestionCreationOptions) {
+}: StreamQuestionCreationOptions): Promise<void> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'text/event-stream',
@@ -93,17 +133,21 @@ export async function streamQuestionCreation({
     if (!event) return
 
     if (event.eventName === 'start') {
-      onStart?.(event.payload as QuestionsCreateStreamStart)
+      if (isStartPayload(event.payload)) {
+        onStart?.(event.payload)
+      }
       return
     }
 
     if (event.eventName === 'progress') {
-      onProgress?.(event.payload as QuestionsCreateStreamProgress)
+      if (isProgressPayload(event.payload)) {
+        onProgress?.(event.payload)
+      }
       return
     }
 
-    if (event.eventName === 'done') {
-      onDone?.(event.payload as QuestionsCreateStreamDonePayload)
+    if (event.eventName === 'done' && isDonePayload(event.payload)) {
+      onDone?.(event.payload)
       streamDone = true
     }
   }
@@ -123,6 +167,7 @@ export async function streamQuestionCreation({
     }
   }
 
+  // SSE can finish without a trailing separator, so handle the remaining chunk.
   const tail = buffer.trim().replace(/\r/g, '')
   if (tail) {
     processBlock(tail)

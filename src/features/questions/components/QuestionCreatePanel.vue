@@ -5,55 +5,59 @@
         class="flex flex-col justify-between w-full h-64 mt-8 px-4"
         @submit.prevent="onFormSubmit"
       >
-        <float-label variant="on" class="w-full">
-          <input-text id="subject" class="w-full" name="subject" v-model="formState.subject" />
+        <FloatLabel class="w-full" variant="on">
+          <InputText id="subject" v-model="formState.subject" class="w-full" name="subject" />
           <label for="subject">Subject</label>
-        </float-label>
-        <message v-if="formErrors.subject" severity="error" size="small" variant="simple">
+        </FloatLabel>
+        <Message v-if="formErrors.subject" severity="error" size="small" variant="simple">
           {{ formErrors.subject }}
-        </message>
+        </Message>
 
-        <float-label variant="on" class="w-full">
-          <input-text id="tag" class="w-full" name="tag" v-model="formState.tag" />
+        <FloatLabel class="w-full" variant="on">
+          <InputText id="tag" v-model="formState.tag" class="w-full" name="tag" />
           <label for="tag">Tag</label>
-        </float-label>
-        <message v-if="formErrors.tag" severity="error" size="small" variant="simple">
+        </FloatLabel>
+        <Message v-if="formErrors.tag" severity="error" size="small" variant="simple">
           {{ formErrors.tag }}
-        </message>
+        </Message>
 
         <div class="flex justify-between flex-wrap">
-          <float-label variant="on" class="w-2/5">
-            <input-number
+          <FloatLabel class="w-2/5" variant="on">
+            <InputNumber
               id="number"
+              v-model="formState.number"
               class="w-full"
               name="number"
               :min="1"
-              v-model="formState.number"
             />
             <label for="number">Number of Questions</label>
-          </float-label>
-          <message v-if="formErrors.number" severity="error" size="small" variant="simple">
+          </FloatLabel>
+
+          <Message v-if="formErrors.number" severity="error" size="small" variant="simple">
             {{ formErrors.number }}
-          </message>
-          <select-button
+          </Message>
+
+          <SelectButton
             v-model="formState.type"
-            size="small"
             :options="questionTypes"
+            name="type"
             option-label="label"
             option-value="value"
-            name="type"
+            size="small"
           />
         </div>
+
         <Button
-          class="w-full"
-          severity="secondary"
-          type="submit"
-          label="Start Quiz"
           :loading="isStreaming"
           :disabled="isStreaming"
+          class="w-full"
+          label="Start Quiz"
+          severity="secondary"
+          type="submit"
         />
       </form>
-      <div class="mt-4 px-4" v-if="isStreaming || createProgress.total > 0">
+
+      <div v-if="isStreaming || createProgress.total > 0" class="mt-4 px-4">
         <div class="text-sm mb-1">
           Generating questions: {{ createProgress.current }} / {{ createProgress.total }} ({{
             createProgress.percent
@@ -66,7 +70,8 @@
           ></div>
         </div>
       </div>
-      <div class="mt-3 px-4 text-red-600 text-sm" v-if="createError">
+
+      <div v-if="createError" class="mt-3 px-4 text-red-600 text-sm">
         {{ createError }}
       </div>
     </Fieldset>
@@ -74,9 +79,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
-import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
+import { useQuestionHistoryStore } from '@/stores/questionHistoryStore'
 import { storeToRefs } from 'pinia'
+import { computed, reactive } from 'vue'
 
 type QuestionKind = 'single' | 'multi'
 
@@ -92,6 +97,12 @@ interface QuestionCreationFormState {
   type: QuestionKind
 }
 
+interface QuestionCreationFormErrors {
+  subject: string
+  tag: string
+  number: string
+}
+
 const formState = reactive<QuestionCreationFormState>({
   subject: '',
   tag: '',
@@ -99,7 +110,7 @@ const formState = reactive<QuestionCreationFormState>({
   type: 'single',
 })
 
-const formErrors = reactive({
+const formErrors = reactive<QuestionCreationFormErrors>({
   subject: '',
   tag: '',
   number: '',
@@ -121,7 +132,7 @@ const validateForm = () => {
 const onFormSubmit = async () => {
   if (!validateForm()) return
 
-  await historyStore.createWithStream(
+  await historyStore.createQuestions(
     formState.subject.trim(),
     formState.tag.trim(),
     questionCount.value,
@@ -129,5 +140,3 @@ const onFormSubmit = async () => {
   )
 }
 </script>
-
-<style scoped></style>

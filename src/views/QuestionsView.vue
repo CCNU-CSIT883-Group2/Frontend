@@ -1,24 +1,22 @@
 <template>
   <div class="m-3 w-full flex-1 flex">
-    <toast />
-    <question-sidebar class="flex-none w-72" v-model:selected="selectedHistory" />
-    <answer-panel
-      :key="selectedHistory"
-      :history-id="selectedHistory"
+    <Toast />
+    <QuestionSidebar v-model:selected="selectedHistoryId" class="flex-none w-72" />
+    <AnswerPanel
+      v-if="selectedHistoryId !== -1"
+      :key="selectedHistoryId"
+      :history-id="selectedHistoryId"
       class="flex-1 ml-2"
-      v-if="selectedHistory !== -1"
     />
-    <question-create-panel v-else />
+    <QuestionCreatePanel v-else />
   </div>
 </template>
 
 <script setup lang="ts">
+import AnswerPanel from '@/features/questions/components/AnswerPanel.vue'
+import QuestionCreatePanel from '@/features/questions/components/QuestionCreatePanel.vue'
+import QuestionSidebar from '@/features/questions/components/QuestionSidebar.vue'
 import { ref } from 'vue'
-import AnswerPanel from '@/components/AnswerPanel.vue'
-import QuestionSidebar from '@/components/QuestionSidebar.vue'
-import QuestionCreatePanel from '@/components/QuestionCreatePanel.vue'
 
-const selectedHistory = ref(-1)
+const selectedHistoryId = ref(-1)
 </script>
-
-<style scoped></style>

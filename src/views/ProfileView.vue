@@ -5,14 +5,18 @@
     >
       <div class="flex-1 md:mr-10">
         <div class="bg-surface-0 dark:bg-surface-950 p-2 w-[800px] rounded-lg">
-          <div class="font-medium text-4xl text-surface-900 dark:text-surface-0 mb-6">User Dashboard</div>
+          <div class="font-medium text-4xl text-surface-900 dark:text-surface-0 mb-6">
+            User Dashboard
+          </div>
           <div class="text-surface-500 dark:text-surface-300 mb-10">
             Manage your profile, track progress, and explore more features.
           </div>
 
           <div class="bg-surface-100 dark:bg-surface-800 p-8 rounded-lg mb-6">
             <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg">
+              <div
+                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
+              >
                 Role
               </div>
               <div class="text-surface-900 dark:text-surface-0 w-full md:w-8/12">
@@ -23,22 +27,24 @@
             <ProfileEditableRow
               label="Name"
               v-model="form.name"
-              :editing="editingName"
-              @toggle="editingName = true"
+              :is-editing="isEditingName"
+              @toggle="isEditingName = true"
               @save="saveName"
             />
 
             <ProfileEditableRow
               label="Email"
               v-model="form.email"
-              :editing="editingEmail"
+              :is-editing="isEditingEmail"
               type="email"
-              @toggle="editingEmail = true"
+              @toggle="isEditingEmail = true"
               @save="saveEmail"
             />
 
             <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg">
+              <div
+                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
+              >
                 New Password
               </div>
               <div class="w-full md:w-8/12">
@@ -64,7 +70,9 @@
             </li>
 
             <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg">
+              <div
+                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
+              >
                 Confirm Password
               </div>
               <div class="w-full md:w-8/12">
@@ -123,8 +131,9 @@
 
 <script setup lang="ts">
 import axios from '@/axios'
-import ProfileEditableRow from '@/components/profile/ProfileEditableRow.vue'
-import { useUserStore } from '@/stores/user'
+import ProfileEditableRow from '@/features/profile/components/ProfileEditableRow.vue'
+import { ROUTE_NAMES } from '@/router'
+import { useUserStore } from '@/stores/userStore'
 import type { ProfileUpdateRequest, Response } from '@/types'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -151,8 +160,8 @@ const form = reactive<ProfileForm>({
   confirmPassword: '',
 })
 
-const editingName = ref(false)
-const editingEmail = ref(false)
+const isEditingName = ref(false)
+const isEditingEmail = ref(false)
 const isSaving = ref(false)
 const isLoggingOut = ref(false)
 const errorMessage = ref('')
@@ -161,12 +170,14 @@ const successMessage = ref('')
 watch(
   () => [user.value.name, user.value.email],
   ([name, email]) => {
-    if (!editingName.value) form.name = name
-    if (!editingEmail.value) form.email = email
+    if (!isEditingName.value) form.name = name
+    if (!isEditingEmail.value) form.email = email
   },
 )
 
 const passwordMismatch = computed(() => form.newPassword !== form.confirmPassword)
+const trimmedName = computed(() => form.name.trim())
+const trimmedEmail = computed(() => form.email.trim())
 
 const passwordStrength = computed(() => {
   let strength = 0
@@ -182,33 +193,29 @@ const passwordStrength = computed(() => {
 })
 
 const hasProfileChanges = computed(() => {
-  return form.name.trim() !== user.value.name || form.email.trim() !== user.value.email
+  return trimmedName.value !== user.value.name || trimmedEmail.value !== user.value.email
 })
 
 const hasPasswordChanges = computed(() => {
-  return (
-    form.newPassword.length > 0 &&
-    form.confirmPassword.length > 0 &&
-    !passwordMismatch.value
-  )
+  return form.newPassword.length > 0 && form.confirmPassword.length > 0 && !passwordMismatch.value
 })
 
 const canSave = computed(() => hasProfileChanges.value || hasPasswordChanges.value)
 
 const saveName = () => {
-  form.name = form.name.trim()
-  editingName.value = false
+  form.name = trimmedName.value
+  isEditingName.value = false
 }
 
 const saveEmail = () => {
-  form.email = form.email.trim()
-  editingEmail.value = false
+  form.email = trimmedEmail.value
+  isEditingEmail.value = false
 }
 
 const buildUpdatePayload = (): ProfileUpdateRequest => ({
   name: user.value.name,
-  new_name: form.name.trim() !== user.value.name ? form.name.trim() : null,
-  new_email: form.email.trim() !== user.value.email ? form.email.trim() : null,
+  new_name: trimmedName.value !== user.value.name ? trimmedName.value : null,
+  new_email: trimmedEmail.value !== user.value.email ? trimmedEmail.value : null,
   new_password: hasPasswordChanges.value ? form.newPassword : null,
 })
 
@@ -239,8 +246,8 @@ const saveAllChanges = async () => {
 
     form.newPassword = ''
     form.confirmPassword = ''
-    editingName.value = false
-    editingEmail.value = false
+    isEditingName.value = false
+    isEditingEmail.value = false
     successMessage.value = response.data.info || 'Profile updated successfully'
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Failed to save profile'
@@ -260,7 +267,7 @@ const logout = async () => {
   } finally {
     userStore.clearUser()
     isLoggingOut.value = false
-    await router.push({ name: 'login' })
+    await router.push({ name: ROUTE_NAMES.login })
   }
 }
 </script>

@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import { useElementHover } from '@vueuse/core'
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const {
   icon = '',
@@ -43,11 +43,12 @@ const button = ref<HTMLElement | null>(null)
 const isHovered = useElementHover(button)
 
 const router = useRouter()
+const route = useRoute()
 
 const goToTargetPage = () => {
   if (!to) return
   void router.push({ name: to })
 }
 
-const isRouterMatched = computed(() => router.currentRoute.value.name === to)
+const isRouterMatched = computed(() => route.name === to)
 </script>

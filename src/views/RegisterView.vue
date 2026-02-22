@@ -1,5 +1,7 @@
 <template>
-  <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center px-4">
+  <div
+    class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center px-4"
+  >
     <div
       class="bg-surface-0 dark:bg-surface-900 p-8 shadow-lg rounded-lg w-full max-w-2xl flex flex-col items-center"
     >
@@ -19,14 +21,18 @@
 
         <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-2">Register</div>
         <div class="flex justify-center">
-          <span class="text-surface-600 dark:text-surface-200 font-medium">Already have an account?</span>
+          <span class="text-surface-600 dark:text-surface-200 font-medium"
+            >Already have an account?</span
+          >
           <a class="font-medium ml-2 text-primary cursor-pointer" @click="goToLogin">Login here!</a>
         </div>
       </div>
 
       <form class="flex flex-col space-y-3 w-full max-w-lg" @submit.prevent="handleRegister">
         <div class="flex flex-col">
-          <label for="user-role" class="text-surface-900 dark:text-surface-0 font-medium mb-2">User Role</label>
+          <label for="user-role" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
+            >User Role</label
+          >
           <Select
             id="user-role"
             v-model="form.role"
@@ -39,7 +45,9 @@
         </div>
 
         <div class="flex flex-col">
-          <label for="username" class="text-surface-900 dark:text-surface-0 font-medium mb-2">Username</label>
+          <label for="username" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
+            >Username</label
+          >
           <FloatLabel variant="in">
             <InputText id="username" v-model="form.name" variant="filled" class="w-full h-12" />
             <label for="username">Username</label>
@@ -47,7 +55,9 @@
         </div>
 
         <div class="flex flex-col">
-          <label for="email" class="text-surface-900 dark:text-surface-0 font-medium mb-2">Email</label>
+          <label for="email" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
+            >Email</label
+          >
           <FloatLabel variant="in">
             <InputText id="email" v-model="form.email" variant="filled" class="w-full h-12" />
             <label for="email">Email</label>
@@ -55,7 +65,9 @@
         </div>
 
         <div class="flex flex-col">
-          <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2">Password</label>
+          <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
+            >Password</label
+          >
           <FloatLabel variant="in">
             <InputText
               id="password"
@@ -79,7 +91,10 @@
         </div>
 
         <div class="flex flex-col">
-          <label for="confirm-password" class="text-surface-900 dark:text-surface-0 font-medium mb-2">
+          <label
+            for="confirm-password"
+            class="text-surface-900 dark:text-surface-0 font-medium mb-2"
+          >
             Confirm Password
           </label>
           <FloatLabel variant="in">
@@ -100,16 +115,20 @@
 
         <div class="flex justify-between items-center">
           <div class="flex items-center">
-            <Checkbox id="terms" v-model="termsAccepted" class="mr-2" :binary="true" />
+            <Checkbox id="terms" v-model="isTermsAccepted" class="mr-2" :binary="true" />
             <label for="terms" class="text-surface-900 dark:text-surface-0">
               I accept the terms and conditions
             </label>
           </div>
-          <a class="font-medium text-primary cursor-pointer" @click="termsDialogVisible = true">Read Terms</a>
+          <a class="font-medium text-primary cursor-pointer" @click="isTermsDialogVisible = true"
+            >Read Terms</a
+          >
         </div>
 
         <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
-        <Message v-if="successMessage" severity="success" :closable="false">{{ successMessage }}</Message>
+        <Message v-if="successMessage" severity="success" :closable="false">{{
+          successMessage
+        }}</Message>
 
         <Button
           label="Register"
@@ -123,14 +142,14 @@
     </div>
 
     <Dialog
-      v-model:visible="termsDialogVisible"
+      v-model:visible="isTermsDialogVisible"
       :style="{ width: '50vw' }"
       header="Terms and Conditions"
       :modal="true"
     >
       <p>Please follow the platform terms and conditions.</p>
       <template #footer>
-        <Button label="Cancel" icon="pi pi-times" @click="termsDialogVisible = false" />
+        <Button label="Cancel" icon="pi pi-times" @click="isTermsDialogVisible = false" />
         <Button label="Agree" icon="pi pi-check" @click="agreeTerms" />
       </template>
     </Dialog>
@@ -139,6 +158,7 @@
 
 <script setup lang="ts">
 import axios from '@/axios'
+import { ROUTE_NAMES } from '@/router'
 import type { RegisterResponse } from '@/types'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
@@ -147,7 +167,7 @@ import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
-import { computed, reactive, ref } from 'vue'
+import { computed, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 type UserRole = 'teacher' | 'student'
@@ -173,11 +193,12 @@ const form = reactive<RegisterForm>({
   confirmPassword: '',
 })
 
-const termsAccepted = ref(false)
-const termsDialogVisible = ref(false)
+const isTermsAccepted = ref(false)
+const isTermsDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+let redirectTimer: ReturnType<typeof setTimeout> | null = null
 
 const router = useRouter()
 
@@ -203,17 +224,17 @@ const canSubmit = computed(() => {
     form.password.length > 0 &&
     form.confirmPassword.length > 0 &&
     !passwordMismatch.value &&
-    termsAccepted.value
+    isTermsAccepted.value
   )
 })
 
 const agreeTerms = () => {
-  termsAccepted.value = true
-  termsDialogVisible.value = false
+  isTermsAccepted.value = true
+  isTermsDialogVisible.value = false
 }
 
 const goToLogin = () => {
-  void router.push({ name: 'login' })
+  void router.push({ name: ROUTE_NAMES.login })
 }
 
 const handleRegister = async () => {
@@ -240,8 +261,8 @@ const handleRegister = async () => {
     }
 
     successMessage.value = response.data.info || 'Registration successful'
-    setTimeout(() => {
-      void router.push({ name: 'login' })
+    redirectTimer = setTimeout(() => {
+      void router.push({ name: ROUTE_NAMES.login })
     }, 600)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Registration failed'
@@ -250,4 +271,9 @@ const handleRegister = async () => {
     isSubmitting.value = false
   }
 }
+
+onUnmounted(() => {
+  if (!redirectTimer) return
+  clearTimeout(redirectTimer)
+})
 </script>

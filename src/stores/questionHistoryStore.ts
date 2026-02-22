@@ -1,6 +1,7 @@
 import axios from '@/axios'
+import { API_BASE_URL } from '@/config'
 import { streamQuestionCreation } from '@/services/questionCreationStream'
-import { useUserSettingsStore, useUserStore } from '@/stores/user'
+import { useUserSettingsStore, useUserStore } from '@/stores/userStore'
 import type {
   CreateQuestionRequest,
   History,
@@ -10,41 +11,58 @@ import type {
   Response,
 } from '@/types'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 
 const modelCodeByName: Record<string, string> = {
   ChatGPT: 'C',
   Kimi: 'K',
 }
 
+const DEFAULT_PROGRESS: QuestionsCreateProgressState = {
+  total: 0,
+  current: 0,
+  percent: 0,
+}
+
 export const useQuestionHistoryStore = defineStore('questionHistory', () => {
-  const histories = ref<History[]>([])
+  const histories = shallowRef<History[]>([])
   const isFetching = ref(false)
 
-  const added = ref(false)
+  const hasCreatedHistory = ref(false)
+  const latestCreatedHistoryId = shallowRef<number | null>(null)
   const isStreaming = ref(false)
   const createError = ref<string | null>(null)
-  const donePayload = ref<QuestionsCreateStreamDonePayload | null>(null)
-  const createProgress = ref<QuestionsCreateProgressState>({
-    total: 0,
-    current: 0,
-    percent: 0,
-  })
+  const donePayload = shallowRef<QuestionsCreateStreamDonePayload | null>(null)
+  const createProgress = shallowRef<QuestionsCreateProgressState>({ ...DEFAULT_PROGRESS })
 
-  const subjects = computed(() => Array.from(new Set(histories.value.map((history) => history.subject))))
-  const tags = computed(() => Array.from(new Set(histories.value.map((history) => history.tag))))
+  const subjects = computed(() =>
+    Array.from(new Set(histories.value.map((history) => history.subject))).sort(),
+  )
+  const tags = computed(() =>
+    Array.from(new Set(histories.value.map((history) => history.tag))).sort(),
+  )
 
-  const { name, token } = storeToRefs(useUserStore())
+  const { name: username, token } = storeToRefs(useUserStore())
   const { settings } = storeToRefs(useUserSettingsStore())
+
+  const setCreateProgress = (patch: Partial<QuestionsCreateProgressState>) => {
+    createProgress.value = { ...createProgress.value, ...patch }
+  }
 
   const resetCreateState = () => {
     createError.value = null
     donePayload.value = null
-    createProgress.value = {
-      total: 0,
-      current: 0,
-      percent: 0,
-    }
+    createProgress.value = { ...DEFAULT_PROGRESS }
+  }
+
+  const markHistoryCreated = (historyId: number) => {
+    latestCreatedHistoryId.value = historyId
+    hasCreatedHistory.value = true
+  }
+
+  const clearCreatedHistoryState = () => {
+    hasCreatedHistory.value = false
+    latestCreatedHistoryId.value = null
   }
 
   const upsertHistory = (history: History) => {
@@ -66,12 +84,12 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     number: number,
     type: string,
   ): CreateQuestionRequest => ({
-    name: name.value,
+    name: username.value,
     subject,
     tag,
     number,
     type,
-    model: modelCodeByName[settings.value.questions.generate_model] ?? 'C',
+    model: modelCodeByName[settings.value.questions.generateModel] ?? 'C',
   })
 
   const applyCreateDonePayload = (payload: QuestionsCreateStreamDonePayload) => {
@@ -82,11 +100,14 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
       current: payload.number,
       percent: 100,
     }
-    added.value = true
+    markHistoryCreated(payload.history.history_id)
   }
 
   const createWithFallback = async (requestPayload: CreateQuestionRequest) => {
-    const response = await axios.post<Response<QuestionsCreateData>>('/questions/create', requestPayload)
+    const response = await axios.post<Response<QuestionsCreateData>>(
+      '/questions/create',
+      requestPayload,
+    )
     const data = response.data.data
 
     if (!data?.history?.length) {
@@ -103,35 +124,33 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     })
   }
 
-  const fetch = async (): Promise<string | null> => {
+  const fetchHistories = async (): Promise<string | null> => {
     isFetching.value = true
 
     try {
       const response = await axios.get<Response<History[]>>('/history', {
-        params: { username: name.value },
+        params: { username: username.value },
       })
       histories.value = response.data.data ?? []
       return null
     } catch (error) {
-      return error instanceof Error
-        ? error.message
-        : 'Network error, please try again later.'
+      return error instanceof Error ? error.message : 'Network error, please try again later.'
     } finally {
       isFetching.value = false
     }
   }
 
-  const createWithStream = async (subject: string, tag: string, number: number, type: string) => {
+  const createQuestions = async (subject: string, tag: string, number: number, type: string) => {
     isFetching.value = true
     isStreaming.value = true
-    added.value = false
+    clearCreatedHistoryState()
     resetCreateState()
 
     const requestPayload = buildCreateRequest(subject, tag, number, type)
 
     try {
       await streamQuestionCreation({
-        baseUrl: import.meta.env.VITE_SERVER_BASE_URL as string,
+        baseUrl: API_BASE_URL,
         token: token.value || localStorage.getItem('token') || '',
         payload: requestPayload,
         onStart: (payload) => {
@@ -142,11 +161,11 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
           }
         },
         onProgress: (payload) => {
-          createProgress.value = {
+          setCreateProgress({
             total: payload.total,
             current: payload.current,
             percent: payload.percent,
-          }
+          })
         },
         onDone: applyCreateDonePayload,
       })
@@ -168,16 +187,16 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     }
   }
 
-  const del = async (id: number): Promise<boolean> => {
+  const deleteHistory = async (historyId: number): Promise<boolean> => {
     try {
       await axios.delete<Response<undefined>>('/history', {
         data: {
-          username: name.value,
-          history_id: id,
+          username: username.value,
+          history_id: historyId,
         },
       })
 
-      histories.value = histories.value.filter((history) => history.history_id !== id)
+      histories.value = histories.value.filter((history) => history.history_id !== historyId)
       return true
     } catch {
       return false
@@ -189,13 +208,15 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     subjects,
     tags,
     isFetching,
-    added,
+    hasCreatedHistory,
+    latestCreatedHistoryId,
     isStreaming,
     createError,
     donePayload,
     createProgress,
-    fetch,
-    createWithStream,
-    del,
+    clearCreatedHistoryState,
+    fetchHistories,
+    createQuestions,
+    deleteHistory,
   }
 })

@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import { useDark } from '@vueuse/core'
 
@@ -10,6 +10,8 @@ interface UserState {
   role: string
 }
 
+type QuestionGenerateModel = 'ChatGPT' | 'Kimi'
+
 const STORAGE_KEYS = {
   name: 'username',
   userId: 'user_id',
@@ -18,13 +20,21 @@ const STORAGE_KEYS = {
   role: 'role',
 } as const
 
+const EMPTY_USER: UserState = {
+  name: '',
+  user_id: '',
+  token: '',
+  email: '',
+  role: '',
+}
+
 function getStoredUser(): UserState {
   return {
-    name: localStorage.getItem(STORAGE_KEYS.name) ?? '',
-    user_id: localStorage.getItem(STORAGE_KEYS.userId) ?? '',
-    token: localStorage.getItem(STORAGE_KEYS.token) ?? '',
-    email: localStorage.getItem(STORAGE_KEYS.email) ?? '',
-    role: localStorage.getItem(STORAGE_KEYS.role) ?? '',
+    name: localStorage.getItem(STORAGE_KEYS.name) ?? EMPTY_USER.name,
+    user_id: localStorage.getItem(STORAGE_KEYS.userId) ?? EMPTY_USER.user_id,
+    token: localStorage.getItem(STORAGE_KEYS.token) ?? EMPTY_USER.token,
+    email: localStorage.getItem(STORAGE_KEYS.email) ?? EMPTY_USER.email,
+    role: localStorage.getItem(STORAGE_KEYS.role) ?? EMPTY_USER.role,
   }
 }
 
@@ -41,7 +51,8 @@ function clearPersistedUser() {
 }
 
 export const useUserStore = defineStore('user', () => {
-  const user = ref<UserState>(getStoredUser())
+  // User object is replaced as a whole for simpler persistence semantics.
+  const user = shallowRef<UserState>(getStoredUser())
   const isAuthenticated = computed(() => user.value.token !== '')
 
   const role = computed(() => user.value.role)
@@ -56,18 +67,11 @@ export const useUserStore = defineStore('user', () => {
   }
 
   const patchUser = (partial: Partial<UserState>) => {
-    user.value = { ...user.value, ...partial }
-    persistUser(user.value)
+    setUser({ ...user.value, ...partial })
   }
 
   const clearUser = () => {
-    user.value = {
-      name: '',
-      user_id: '',
-      token: '',
-      email: '',
-      role: '',
-    }
+    user.value = { ...EMPTY_USER }
     clearPersistedUser()
   }
 
@@ -92,7 +96,7 @@ export const useUserSettingsStore = defineStore('userSettings', () => {
     questions: {
       showDifficulty: true,
       showTime: false,
-      generate_model: 'ChatGPT',
+      generateModel: 'ChatGPT' as QuestionGenerateModel,
     },
   })
 

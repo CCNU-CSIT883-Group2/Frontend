@@ -15,7 +15,9 @@
           />
         </svg>
 
-        <div class="text-surface-900 dark:text-surface-0 text-4xl font-medium mb-4">Welcome ChatCNU</div>
+        <div class="text-surface-900 dark:text-surface-0 text-4xl font-medium mb-4">
+          Welcome ChatCNU
+        </div>
         <span class="text-surface-600 dark:text-surface-200 font-medium leading-normal">
           Don't have an account?
         </span>
@@ -26,7 +28,9 @@
 
       <form class="space-y-4" @submit.prevent="handleLogin">
         <div>
-          <label for="name" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Name</label>
+          <label for="name" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block"
+            >Name</label
+          >
           <InputText id="name" v-model="form.name" type="text" placeholder="Name" class="w-full" />
         </div>
 
@@ -46,7 +50,10 @@
         <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
 
         <div class="flex items-center justify-end">
-          <a class="font-medium no-underline text-primary text-right cursor-pointer" @click="goToBackPassword">
+          <a
+            class="font-medium no-underline text-primary text-right cursor-pointer"
+            @click="goToPasswordRecovery"
+          >
             Forgot password?
           </a>
         </div>
@@ -66,7 +73,8 @@
 
 <script setup lang="ts">
 import axios from '@/axios'
-import { useUserStore } from '@/stores/user'
+import { ROUTE_NAMES } from '@/router'
+import { useUserStore } from '@/stores/userStore'
 import type { LoginData, Response } from '@/types'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -91,19 +99,23 @@ const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 
-const goToBackPassword = () => {
+const goToPasswordRecovery = () => {
   errorMessage.value = ''
-  void router.push({ name: 'backpassword' })
+  void router.push({ name: ROUTE_NAMES.backPassword })
 }
 
 const goToRegister = () => {
   errorMessage.value = ''
-  void router.push({ name: 'register' })
+  void router.push({ name: ROUTE_NAMES.register })
 }
 
 const getRedirectPath = () => {
   const redirect = route.query.redirect
-  return typeof redirect === 'string' && redirect.length > 0 ? redirect : '/questions'
+  if (typeof redirect === 'string' && redirect.length > 0) {
+    return redirect
+  }
+
+  return router.resolve({ name: ROUTE_NAMES.questions }).fullPath
 }
 
 const handleLogin = async () => {

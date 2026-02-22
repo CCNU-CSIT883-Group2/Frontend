@@ -5,7 +5,6 @@
     :width="size"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <!-- 背景圆圈 -->
     <circle
       :class="backgroundColorClass"
       :cx="size / 2"
@@ -14,7 +13,6 @@
       :stroke-width="strokeWidth"
       fill="none"
     />
-    <!-- 前景圆圈（显示进度） -->
     <circle
       :class="colorClass"
       :cx="size / 2"
@@ -60,13 +58,10 @@ const props = withDefaults(
 
 const normalizedPercentage = computed(() => Math.min(100, Math.max(0, props.percentage)))
 
-// 计算圆圈的半径
 const radius = computed(() => (props.size - props.strokeWidth) / 2)
 
-// 计算圆圈的周长
 const circumference = computed(() => 2 * Math.PI * radius.value)
 
-// 根据进度计算偏移量
 const offset = computed(() => {
   return circumference.value - (normalizedPercentage.value / 100) * circumference.value
 })
@@ -86,7 +81,5 @@ const backgroundColorClass = computed(
 <style scoped>
 circle {
   transition: stroke-dashoffset 0.35s;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
 }
 </style>
