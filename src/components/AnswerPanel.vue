@@ -62,10 +62,10 @@ const ah = watch([isFetchingQuestion, isFetchingAttempts], () => {
     const attempts_map = new Map<number, number[]>()
 
     attempt.value.forEach((a) => {
-      attempts_map.set(a.QID, a.user_answers)
+      attempts_map.set(a.question_id, a.user_answers)
     })
 
-    attempts.value = questionsList.value.map((q) => attempts_map.get(q.id) ?? [])
+    attempts.value = questionsList.value.map((q) => attempts_map.get(q.question_id) ?? [])
     answered.value = attempts.value.every((a) => a.length > 0)
 
     ah.stop()

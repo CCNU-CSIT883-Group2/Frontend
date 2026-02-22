@@ -137,12 +137,17 @@ import { ref, computed } from 'vue';
 import axios from '@/axios'; // 导入 Axios
 import { useRouter } from 'vue-router';
 
+interface RoleOption {
+  name: string
+  value: string
+}
+
 const roles = ref([
   { name: 'Teacher', value: 'teacher' },
   { name: 'Student', value: 'student' },
 ]);
 
-const selectedRole = ref(''); // 用户选择的角色
+const selectedRole = ref<RoleOption | null>(null); // 用户选择的角色
 const username = ref(''); // 用户名
 const email = ref(''); // 邮箱
 const password = ref(''); // 密码
@@ -152,6 +157,7 @@ const termsDialogVisible = ref(false); // 条款弹窗可见性
 const errorMessage = ref<string>(''); // 错误信息
 const successMessage = ref<string>(''); // 成功信息
 const router = useRouter();
+const termsContent = ref('Please follow the platform terms and conditions.');
 
 const passwordMismatch = computed(() => password.value !== confirmPassword.value);
 
@@ -207,6 +213,10 @@ const validateConfirmPassword = () => {
   }
 };
 
+const checkPasswordStrength = () => {
+  // keep for template binding
+};
+
 // 注册处理函数
 const handleRegister = async (): Promise<void> => {
   if (!username.value || !email.value || !password.value || !selectedRole.value) {
@@ -224,7 +234,7 @@ const handleRegister = async (): Promise<void> => {
       name: username.value,
       password: password.value,
       email: email.value,
-      role: selectedRole.value.value,
+      role: selectedRole.value?.value,
     });
 
     if (response.data.code === 200) {
@@ -238,7 +248,7 @@ const handleRegister = async (): Promise<void> => {
       // 注册失败，显示错误信息
       errorMessage.value = response.data.info || 'Registration failed';
     }
-  } catch (error) {
+  } catch {
     // 处理网络错误或服务器错误
     errorMessage.value = 'Unable to connect to the server, please try again later';
     successMessage.value = '';

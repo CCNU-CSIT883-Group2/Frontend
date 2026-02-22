@@ -82,7 +82,6 @@ import { useUserStore } from '@/stores/user'
 
 // 定义表单相关数据
 const name = ref<string>('') // 用户输入的用户名
-const email = ref<string>('') // 用户输入的邮箱
 const password = ref<string>('') // 用户输入的密码
 const rememberMe = ref<boolean>(false) // 是否勾选记住我
 const errorMessage = ref<string>('') // 登录失败提示信息
@@ -104,17 +103,17 @@ const handleLogin = async (): Promise<void> => {
     if (response.data.code === 200) {
       // 登录成功，保存 token 到 localStorage
       localStorage.setItem('token', response.data.data.token)
-      localStorage.setItem('username', response.data.data.User.name)
-      localStorage.setItem('email', response.data.data.User.email)
-      localStorage.setItem('role', response.data.data.User.role)
-      console.log(response.data.data)
+      localStorage.setItem('username', response.data.data.user.name)
+      localStorage.setItem('user_id', response.data.data.user.user_id)
+      localStorage.setItem('email', response.data.data.user.email)
+      localStorage.setItem('role', response.data.data.user.role)
 
       const user = useUserStore()
       user.user.token = response.data.data.token
-      user.user.name = response.data.data.User.name
-      user.user.uid = response.data.data.User.UID
-      user.user.role = response.data.data.User.role
-      user.user.email = response.data.data.User.email
+      user.user.name = response.data.data.user.name
+      user.user.user_id = response.data.data.user.user_id
+      user.user.role = response.data.data.user.role
+      user.user.email = response.data.data.user.email
 
       // alert('Login successful!');
       errorMessage.value = ''

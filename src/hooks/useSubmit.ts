@@ -2,7 +2,7 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { reactive, ref } from 'vue'
 import axios from '@/axios'
-import type { AnswerResponse, Response } from '@/types'
+import type { AttemptPostData, Response } from '@/types'
 
 export function useSubmit(
   history_id: number,
@@ -18,17 +18,19 @@ export function useSubmit(
 
   for (let i = 0; i < question_ids.length; i++) {
     axios
-      .post<Response<AnswerResponse>>('/attempt', {
-        data: {
-          username: name.value,
-          history_id: history_id,
-          QID: question_ids[i],
-          type,
-          choice_answers: answers[i],
-        },
+      .post<Response<AttemptPostData>>('/attempt', {
+        username: name.value,
+        history_id: history_id,
+        question_id: question_ids[i],
+        type,
+        choice_answers: answers[i],
       })
       .then((response) => {
-        answered.set(response.data.data.attempt.QID, true)
+        answered.set(response.data.data.attempt.question_id, true)
+        isFetching.value--
+      })
+      .catch((err) => {
+        error.value = err.toString()
         isFetching.value--
       })
   }

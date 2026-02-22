@@ -179,6 +179,7 @@ const newEmail = ref(user.value.email)
 const newPassword = ref('')
 const confirmPassword = ref('')
 const oldName = ref(user.value.name)
+const oldEmail = ref(user.value.email)
 
 // Password strength logic
 const passwordStrengthStyle = computed(() => {
@@ -207,13 +208,11 @@ const toggleEdit = (field: string): void => {
 
 // Function to save name
 const saveNewName = () => {
-  user.value.name = newName.value // Update the store with the new name
   editingName.value = false
 }
 
 // Function to save email
 const saveNewEmail = () => {
-  user.value.email = newEmail.value // Update the store with the new email
   editingEmail.value = false
 }
 
@@ -222,23 +221,29 @@ const saveAllChanges = async (): Promise<void> => {
   try {
     const data = {
       name: oldName.value,
-      newname: newName.value == user.value.name ? newName.value : '',
-      newemail: newEmail.value == user.value.email ? newEmail.value : '',
-      newpassword: newPassword.value ? newPassword.value : '',
+      new_name: newName.value !== oldName.value ? newName.value : null,
+      new_email: newEmail.value !== oldEmail.value ? newEmail.value : null,
+      new_password: newPassword.value ? newPassword.value : null,
     }
-    localStorage.setItem('name', newName.value)
-    localStorage.setItem('email', newEmail.value)
-    localStorage.setItem('role', user.value.role)
-    console.log(data)
+
     // Make sure data isn't empty
-    if (data.newname || data.newemail || data.newpassword) {
+    if (data.new_name || data.new_email || data.new_password) {
       const response = await axios.post('/profile', data)
 
       if (response.data.code === 200) {
         alert('User information saved successfully!')
         // Update the store with new data
-        if (data.newname) user.value.name = data.newname
-        if (data.newemail) user.value.email = data.newemail
+        if (data.new_name) {
+          user.value.name = data.new_name
+          oldName.value = data.new_name
+          localStorage.setItem('username', data.new_name)
+        }
+        if (data.new_email) {
+          user.value.email = data.new_email
+          oldEmail.value = data.new_email
+          localStorage.setItem('email', data.new_email)
+        }
+        localStorage.setItem('role', user.value.role)
         // Reset password fields
         newPassword.value = ''
         confirmPassword.value = ''
@@ -255,18 +260,20 @@ const saveAllChanges = async (): Promise<void> => {
 const logout = async () => {
   try {
     // 第一步：向后端发送登出请求
-    const response = await axios.post('/logout', { token: user.value.token })
+    const response = await axios.post('/logout')
 
     if (response.data.code === 200) {
       // 第二步：手动重置 store 中的值
       const userStore = useUserStore()
       userStore.user.name = ''
+      userStore.user.user_id = ''
       userStore.user.email = ''
       userStore.user.role = ''
       userStore.user.token = ''
 
       // 第三步：清除 localStorage 中的缓存数据
-      localStorage.removeItem('name')
+      localStorage.removeItem('username')
+      localStorage.removeItem('user_id')
       localStorage.removeItem('email')
       localStorage.removeItem('role')
       localStorage.removeItem('token') // 确保清除 token
@@ -286,7 +293,11 @@ const checkPasswordStrength = () => {
   // You can add custom logic to handle password strength here if necessary
 }
 
-const canSavePassword = computed(
-  () => newPassword.value && confirmPassword.value && passwordsMatch.value,
-)
+const canSavePassword = computed(() => {
+  const profileChanged = newName.value !== oldName.value || newEmail.value !== oldEmail.value
+  const passwordReady =
+    newPassword.value.length > 0 && confirmPassword.value.length > 0 && passwordsMatch.value
+
+  return profileChanged || passwordReady
+})
 </script>

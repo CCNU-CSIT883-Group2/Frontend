@@ -41,21 +41,23 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Chart from 'primevue/chart'
 import axios from '@/axios'
 import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
-
 import { storeToRefs } from 'pinia'
+import type { DailyStatistics, Response, StatisticsData } from '@/types'
+
 // 导入路由
 const route = useRoute()
 const router = useRouter()
+const isDarkMode = ref(false)
 
 // 科目数据
 // const subjects = ref([]);
-const selectedSubject = ref(route.query.subjects || 'OS') // 默认选中的科目
+const selectedSubject = ref((route.query.subjects as string) || '') // 默认选中的科目
 
 const historyStore = useQuestionHistoryStore()
 const { subjects } = storeToRefs(historyStore)
@@ -71,15 +73,12 @@ const fetchSubjectsFromHistory = async () => {
         selectedSubject.value = newSubjects[0] // 如果没有选择科目，则默认选择第一个科目
       }
     })
-
-    console.log('Available Subjects:', subjects.value)
   } catch (error) {
     console.error('Failed to fetch subjects:', error)
   }
 }
 // 当前用户名
-const username = ref(localStorage.getItem('username') || 'wwwlt')
-// console.log('Username:', localStorage.getItem('username'))
+const username = ref(localStorage.getItem('username') || '')
 
 // 处理科目选择事件
 const handleSubjectChange = () => {
@@ -111,14 +110,16 @@ const shareContent = () => {
 }
 
 // 用于保存图表的数据和选项
-const lineChartData = ref({})
-const lineChartOptions = ref({})
-const pieChartData = ref({})
-const pieChartOptions = ref({})
+const lineChartData = ref<Record<string, unknown>>({})
+const lineChartOptions = ref<Record<string, unknown>>({})
+const pieChartData = ref<Record<string, unknown>>({})
+const pieChartOptions = ref<Record<string, unknown>>({})
 
 const fetchChartData = async () => {
+  if (!selectedSubject.value || !username.value) return
+
   try {
-    const response = await axios.get('/statistics', {
+    const response = await axios.get<Response<StatisticsData>>('/statistics', {
       params: {
         username: username.value,
         subject: selectedSubject.value,
@@ -133,22 +134,21 @@ const fetchChartData = async () => {
     }
 
     // 用于保存各科目的总刷题数
-    const subjectTotalAttempts = {}
+    const subjectTotalAttempts: Record<string, number> = {}
 
     // 假设 subjects 是一个响应式引用（例如 ref）
     for (let i = 0; i < subjects.value.length; i++) {
-      const subject = subjects.value[i]
+      const subject = subjects.value[i] as string
 
       try {
         // 发起请求获取该科目的刷题总数
-        const response = await axios.get('/statistics', {
+        const subjectResponse = await axios.get<Response<StatisticsData>>('/statistics', {
           params: { subject: subject, username: username.value },
         })
-        const dailyStatistics1 = response.data.data.daily_statistics
-        console.log('Daily Statistics for', subject, ':', dailyStatistics1)
+        const dailyStatistics1 = subjectResponse.data.data.daily_statistics
 
         // 获取该科目的 total_attempts
-        const totalAttempts = dailyStatistics1.reduce((total, stat) => {
+        const totalAttempts = dailyStatistics1.reduce((total: number, stat: DailyStatistics) => {
           return total + stat.total_attempts // 累加每个日期的刷题数
         }, 0)
 
@@ -165,17 +165,15 @@ const fetchChartData = async () => {
     }
 
     // 打印累加后的结果
-    console.log(subjectTotalAttempts)
-
     // 计算总刷题数
     const totalAttempts = Object.values(subjectTotalAttempts).reduce(
       (total, attempts) => total + attempts,
       0,
     )
-    console.log('Total Attempts Across All Subjects:', totalAttempts)
     // 计算各科目的刷题比例
     const subjectPercentages = subjects.value.map((subject) => {
       const attempts = subjectTotalAttempts[subject] || 0
+      if (totalAttempts === 0) return 0
       return (attempts / totalAttempts) * 100 // 计算比例
     })
 
@@ -270,8 +268,7 @@ onMounted(() => {
   fetchChartData() // 获取图表数据
   const urlParams = new URLSearchParams(window.location.search)
   // username.value = urlParams.get('username') || 'cyyyx';
-  selectedSubject.value = urlParams.get('subjects') || subjects.value[0] // 设置科目
-  console.log('Username from query:', route.query.username)
+  selectedSubject.value = urlParams.get('subjects') || (subjects.value[0] as string) // 设置科目
 })
 
 // 监听科目变化，更新图表

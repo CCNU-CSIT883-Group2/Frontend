@@ -21,7 +21,7 @@
     <div class="overflow-y-auto flex-1 no-scrollbar" ref="panel">
       <question-list-item
         v-for="(q, i) in props.questions"
-        :key="q.id"
+        :key="q.question_id"
         :no="i + 1"
         :question="q"
         class="my-2 mx-3"
@@ -107,7 +107,7 @@ const submit = () => {
 
   const history_id = props.questions[0].history_id
   const question_type = props.questions[0].type
-  const question_ids = props.questions.map((q) => q.id)
+  const question_ids = props.questions.map((q) => q.question_id)
 
   const { answered: a, isFetching } = useSubmit(
     history_id,

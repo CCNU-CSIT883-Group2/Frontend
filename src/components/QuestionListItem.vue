@@ -86,7 +86,7 @@ const isCorrectOption = (index: number) => {
   return (
     selected.value.length !== 0 &&
     props.answered &&
-    props.question.answer.includes(index) &&
+    props.question.correct_answers.includes(index) &&
     selected.value.includes(index)
   )
 }
@@ -94,7 +94,7 @@ const isCorrectOption = (index: number) => {
 const isWrongOption = (index: number) =>
   selected.value.length !== 0 &&
   props.answered &&
-  !props.question.answer.includes(index) &&
+  !props.question.correct_answers.includes(index) &&
   selected.value.includes(index)
 
 const { settings } = useUserSettingsStore()

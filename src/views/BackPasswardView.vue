@@ -39,7 +39,7 @@
 
               <Button label="Retrieve Password" v-if="isRecovering" @click="verifyCode" class="w-full mb-4" />
 
-              <FloatLabel variant="in" class="mb-4" v-else>
+              <FloatLabel variant="in" class="mb-4" v-if="!isRecovering">
                   <InputText id="newPassword" v-model="newPassword" :type="showNewPassword ? 'text' : 'password'" variant="filled" class="w-full" />
                   <label for="newPassword">新密码</label>
                   <div class="flex items-center mt-2">
@@ -119,7 +119,7 @@
           // 跳转到登录界面
           this.$router.push('/login');
       },
-      getPasswordStrength(password) {
+      getPasswordStrength(password: string) {
           if (password.length < 6) return '弱';
           if (password.length < 10) return '中';
           return '强';

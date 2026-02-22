@@ -4,6 +4,7 @@ export interface History {
   progress: number
   subject: string
   tag: string
+  user_id: string
 }
 
 export interface HistoryFilter {
@@ -21,49 +22,117 @@ export enum ProgressStatus {
 
 export interface Question {
   history_id: number
-  id: number
+  question_id: number
   content: string
   explanation: string
   difficulty: number
-  time_required: number
-  answer: number[]
-  options: string[]
-  note?: string
-  type: string
-}
-
-export interface QuestionResponse {
-  content: string
-  correct_answers: number[]
-  difficulty: number
-  explanation: string
-  history_id: number
-  note?: string
-  option1: string
-  option2: string
-  option3: string
-  option4: string
-  qid: number
   time_require: number
+  correct_answers: number[]
+  options: string[]
+  note?: string | null
   type: string
 }
 
-export interface AddHistoryResponse {
+export interface QuestionsCreateData {
+  subject: string
+  tag: string
+  type: string
+  questions: Question[]
   history: History[]
+  number: number
 }
 
-export interface AnswerResponse {
+export interface AttemptPostData {
   attempt: {
     history_id: number
-    QID: number
+    question_id: number
     is_correct: boolean
   }
 }
 
 export interface Attempt {
   user_answers: number[]
-  QID: number
+  question_id: number
   history_id: number
+  attempt_id: number
+  attempt_time: string
+  is_correct: boolean
+  user_id: string
+}
+
+export interface User {
+  user_id: string
+  name: string
+  password: string
+  email: string
+  role: string
+}
+
+export interface LoginData {
+  token: string
+  user: User
+}
+
+export interface RegisterResponse {
+  code: number
+  info: string
+  user: User
+}
+
+export interface ProfileUpdateRequest {
+  name: string
+  new_name: string | null
+  new_email: string | null
+  new_password: string | null
+}
+
+export interface DailyStatistics {
+  date: string
+  total_attempts: number
+  correct_attempts: number
+  correct_rate: number
+  questions_on_date: number[]
+}
+
+export interface StatisticsData {
+  latest_time: string
+  start_of_week: string
+  end_of_week: string
+  daily_statistics: DailyStatistics[]
+}
+
+export interface CreateQuestionRequest {
+  name: string
+  subject: string
+  tag: string
+  type: string
+  number: number
+  model: string
+}
+
+export interface QuestionsCreateStreamStart {
+  total: number
+}
+
+export interface QuestionsCreateStreamProgress {
+  current: number
+  percent: number
+  total: number
+}
+
+export interface QuestionsCreateStreamDonePayload {
+  history: History
+  number: number
+  questions: Question[]
+  subject: string
+  tag: string
+  type: string
+}
+
+export interface QuestionsCreateProgressState {
+  total: number
+  current: number
+  percent: number
 }
 
 export interface Response<T> {

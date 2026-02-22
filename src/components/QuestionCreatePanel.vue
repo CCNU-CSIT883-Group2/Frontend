@@ -12,16 +12,16 @@
           <input-text id="subject" class="w-full" name="subject" v-model="question.subject" />
           <label for="subject">Subject</label>
         </float-label>
-        <message v-if="form.subject?.invalid" severity="error" size="small" variant="simple">
-          {{ form.subject.error?.message }}
+        <message v-if="form.states.subject?.invalid" severity="error" size="small" variant="simple">
+          {{ form.states.subject.error?.message }}
         </message>
 
         <float-label variant="on" class="w-full">
           <input-text id="tag" class="w-full" name="tag" v-model="question.tag" />
           <label for="tag">Tag</label>
         </float-label>
-        <message v-if="form.tag?.invalid" severity="error" size="small" variant="simple">
-          {{ form.tag.error?.message }}
+        <message v-if="form.states.tag?.invalid" severity="error" size="small" variant="simple">
+          {{ form.states.tag.error?.message }}
         </message>
 
         <div class="flex justify-between flex-wrap">
@@ -39,6 +39,22 @@
         </div>
         <Button class="w-full" severity="secondary" type="submit" label="submit">Start Quiz</Button>
       </Form>
+      <div class="mt-4 px-4" v-if="isStreaming || createProgress.total > 0">
+        <div class="text-sm mb-1">
+          Generating questions: {{ createProgress.current }} / {{ createProgress.total }} ({{
+            createProgress.percent
+          }}%)
+        </div>
+        <div class="h-2 rounded bg-surface-200 dark:bg-surface-700 overflow-hidden">
+          <div
+            class="h-full bg-primary transition-all"
+            :style="{ width: `${createProgress.percent}%` }"
+          ></div>
+        </div>
+      </div>
+      <div class="mt-3 px-4 text-red-600 text-sm" v-if="createError">
+        {{ createError }}
+      </div>
     </Fieldset>
   </div>
 </template>
@@ -47,6 +63,7 @@
 import { computed, reactive, ref } from 'vue'
 import { Form } from '@primevue/forms'
 import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
+import { storeToRefs } from 'pinia'
 
 const questionTypes = ref(['Single Choice', 'Multiple Choice'])
 
@@ -65,8 +82,8 @@ const question = reactive<Question>({
 })
 const questionType = computed(() => (question.type === 'Single Choice' ? 'single' : 'multi'))
 
-const resolver = ({ values }) => {
-  const errors = {}
+const resolver = ({ values }: { values: Record<string, unknown> }) => {
+  const errors: Record<string, Array<{ message: string }>> = {}
 
   if (!values.subject) errors.subject = [{ message: 'Subject is required.' }]
   if (!values.tag) errors.tag = [{ message: 'Tag is required.' }]
@@ -75,10 +92,11 @@ const resolver = ({ values }) => {
 }
 
 const historyStore = useQuestionHistoryStore()
+const { createProgress, isStreaming, createError } = storeToRefs(historyStore)
 
-const onFormSubmit = ({ valid }) => {
+const onFormSubmit = async ({ valid }: { valid: boolean }) => {
   if (valid) {
-    historyStore.add(question.subject, question.tag, question.number, questionType.value)
+    await historyStore.createWithStream(question.subject, question.tag, question.number, questionType.value)
   }
 }
 </script>
