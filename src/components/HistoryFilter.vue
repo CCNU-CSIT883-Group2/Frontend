@@ -3,7 +3,7 @@
     <div class="flex justify-between gap-2">
       <float-label variant="on" class="flex-1">
         <Select
-          v-model="selectedSubjects"
+          v-model="selectedSubject"
           :options="subjects"
           filter
           class="w-full border-color rounded-lg shadow-none"
@@ -26,7 +26,7 @@
     <div class="flex justify-between gap-2">
       <float-label class="flex-1" variant="on">
         <Select
-          v-model="selectedTags"
+          v-model="selectedTag"
           :options="tags"
           filter
           class="w-full border-color rounded-lg shadow-none"
@@ -47,7 +47,7 @@
       <select-button
         :options="progressOption"
         size="small"
-        v-model="progress"
+        v-model="selectedProgress"
         optionLabel="value"
         dataKey="value"
       >
@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import { type HistoryFilter, ProgressStatus } from '@/types'
-import { ref, watch } from 'vue'
+import { computed } from 'vue'
 
 withDefaults(defineProps<{ subjects?: string[]; tags?: string[] }>(), {
   subjects: () => [],
@@ -75,44 +75,34 @@ const filter = defineModel<HistoryFilter>('filter', {
 })
 
 // Subject
-const selectedSubjects = ref<string | null>()
-
-watch(selectedSubjects, (value) => {
-  if (value !== null) {
-    filter.value = { ...filter.value, subject: value }
-    return
-  }
-  filter.value = { ...filter.value, subject: '' }
+const selectedSubject = computed<string | null>({
+  get: () => filter.value.subject ?? null,
+  set: (value) => {
+    filter.value = { ...filter.value, subject: value ?? '' }
+  },
 })
 
 // Tag
-const selectedTags = ref<string | null>()
-
-watch(selectedTags, (value) => {
-  if (value !== null) {
-    filter.value = { ...filter.value, tag: value }
-    return
-  }
-  filter.value = { ...filter.value, tag: '' }
+const selectedTag = computed<string | null>({
+  get: () => filter.value.tag ?? null,
+  set: (value) => {
+    filter.value = { ...filter.value, tag: value ?? '' }
+  },
 })
 
 // Progress
-const progress = ref<{ icon: string; value: ProgressStatus } | null>()
-
-watch(progress, (value) => {
-  let status = ProgressStatus.All
-
-  if (value !== null && value !== undefined) {
-    status = value.value
-  }
-
-  filter.value = { ...filter.value, status }
-})
-
-const progressOption = ref([
+const progressOption = [
   { icon: 'pi pi-circle', value: ProgressStatus.InProgress },
   { icon: 'pi pi-check-circle', value: ProgressStatus.Finished },
-])
+]
+
+const selectedProgress = computed<{ icon: string; value: ProgressStatus } | null>({
+  get: () =>
+    progressOption.find((option) => option.value === filter.value.status) ?? null,
+  set: (value) => {
+    filter.value = { ...filter.value, status: value?.value ?? ProgressStatus.All }
+  },
+})
 </script>
 
 <style scoped></style>

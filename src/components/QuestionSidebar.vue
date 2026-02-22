@@ -4,94 +4,83 @@
       :subjects="subjects"
       :tags="tags"
       v-model:filter="filter"
-      v-model:create="create"
+      v-model:create="isCreateRequested"
     />
+
     <div class="w-full h-full flex-1 flex overflow-hidden">
-      <history-list v-model:selected="selected" :history="filteredHistory" />
+      <history-list v-model:selected="selectedHistoryId" :history="filteredHistory" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import HistoryList from '@/components/HistoryList.vue'
 import HistoryFilter from '@/components/HistoryFilter.vue'
-import { type HistoryFilter as Filter, ProgressStatus } from '@/types'
+import HistoryList from '@/components/HistoryList.vue'
 import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
+import { ProgressStatus, type HistoryFilter as HistoryFilterModel } from '@/types'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 const toast = useToast()
 
-const create = ref(false)
-watch(create, (value) => {
-  if (value) {
-    selected.value = -1
-    create.value = false
-  }
-})
-
-const selected = ref(-1)
-const selectedHistory = defineModel<number>('selected', { default: -1 })
-watch(selected, () => {
-  selectedHistory.value =
-    histories.value.find((h) => h.history_id === selected.value)?.history_id ?? -1
+const isCreateRequested = ref(false)
+const selectedHistoryModel = defineModel<number>('selected', { default: -1 })
+const selectedHistoryId = computed({
+  get: () => selectedHistoryModel.value,
+  set: (value: number) => {
+    selectedHistoryModel.value = value
+  },
 })
 
 const historyStore = useQuestionHistoryStore()
 const { histories, added, subjects, tags } = storeToRefs(historyStore)
 
-watch(added, () => {
-  if (added.value) {
-    selected.value = histories.value[histories.value.length - 1].history_id
-    added.value = false
-  }
+watch(isCreateRequested, (requested) => {
+  if (!requested) return
+  selectedHistoryId.value = -1
+  isCreateRequested.value = false
 })
 
-onMounted(() => {
-  const error = historyStore.fetch()
+watch(added, () => {
+  if (!added.value || histories.value.length === 0) return
 
-  const handler = watch(error, () => {
-    if (error.value) {
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: error.value,
-        life: 3000,
-      })
-    }
-    handler.stop()
+  selectedHistoryId.value = histories.value[histories.value.length - 1].history_id
+  added.value = false
+})
+
+onMounted(async () => {
+  const error = await historyStore.fetch()
+  if (!error) return
+
+  toast.add({
+    severity: 'error',
+    summary: 'Error',
+    detail: error,
+    life: 3000,
   })
 })
 
-// filter
-const filter = ref<Filter>({
+const filter = ref<HistoryFilterModel>({
   subject: '',
   tag: '',
   content: [],
   status: ProgressStatus.All,
 })
 
-// filtered history
 const filteredHistory = computed(() => {
-  const hists = histories.value ?? []
+  return [...(histories.value ?? [])]
+    .filter((historyItem) => {
+      const matchesSubject = !filter.value.subject || historyItem.subject === filter.value.subject
+      const matchesTag = !filter.value.tag || historyItem.tag === filter.value.tag
+      const matchesStatus =
+        filter.value.status === ProgressStatus.All ||
+        (filter.value.status === ProgressStatus.InProgress && historyItem.progress < 1) ||
+        (filter.value.status === ProgressStatus.Finished && historyItem.progress === 1)
 
-  return hists
-    .filter((h) => {
-      return (
-        // filter by selected
-        h.history_id === selected.value ||
-        // filter by subject
-        ((filter.value.subject === '' || h.subject === filter.value.subject) &&
-          // filter by tag
-          (filter.value.tag === '' || h.tag === filter.value.tag) &&
-          // filter by status
-          (filter.value.status === ProgressStatus.All ||
-            (h.progress < 1 && filter.value.status === ProgressStatus.InProgress) ||
-            (h.progress === 1 && filter.value.status === ProgressStatus.Finished)))
-      )
+      return matchesSubject && matchesTag && matchesStatus
     })
-    .sort((h) => h.create_time)
+    .sort((a, b) => b.create_time - a.create_time)
 })
 </script>
 

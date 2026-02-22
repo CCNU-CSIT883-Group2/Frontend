@@ -15,138 +15,130 @@
           />
         </svg>
 
-        <div class="text-surface-900 dark:text-surface-0 text-4xl font-medium mb-4">
-          Welcome ChatCNU
-        </div>
-        <span class="text-surface-600 dark:text-surface-200 font-medium leading-normal"
-          >Don't have an account?</span
-        >
-        <a class="font-medium no-underline ml-2 text-primary cursor-pointer" @click="handregister"
-          >Create today!</a
-        >
+        <div class="text-surface-900 dark:text-surface-0 text-4xl font-medium mb-4">Welcome ChatCNU</div>
+        <span class="text-surface-600 dark:text-surface-200 font-medium leading-normal">
+          Don't have an account?
+        </span>
+        <a class="font-medium no-underline ml-2 text-primary cursor-pointer" @click="goToRegister">
+          Create today!
+        </a>
       </div>
 
-      <div>
-        <label for="email1" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block"
-          >Name</label
-        >
-        <InputText id="name" type="text" placeholder="Name" class="w-full mb-4" v-model="name" />
+      <form class="space-y-4" @submit.prevent="handleLogin">
+        <div>
+          <label for="name" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Name</label>
+          <InputText id="name" v-model="form.name" type="text" placeholder="Name" class="w-full" />
+        </div>
 
-        <label for="password1" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block"
-          >Password</label
-        >
-        <InputText
-          id="password1"
-          type="password"
-          placeholder="Password"
-          class="w-full mb-4"
-          v-model="password"
+        <div>
+          <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">
+            Password
+          </label>
+          <InputText
+            id="password"
+            v-model="form.password"
+            type="password"
+            placeholder="Password"
+            class="w-full"
+          />
+        </div>
+
+        <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
+
+        <div class="flex items-center justify-end">
+          <a class="font-medium no-underline text-primary text-right cursor-pointer" @click="goToBackPassword">
+            Forgot password?
+          </a>
+        </div>
+
+        <Button
+          label="Sign In"
+          icon="pi pi-user"
+          class="w-full"
+          type="submit"
+          :loading="isSubmitting"
+          :disabled="isSubmitting"
         />
-
-        <div v-if="errorMessage" class="text-red-600 mb-4">{{ errorMessage }}</div>
-
-        <div class="flex items-center justify-between mb-12">
-          <div class="flex items-center">
-            <Checkbox id="rememberme1" v-model="rememberMe" :binary="true" class="mr-2" />
-            <label for="rememberme1">Remember me</label>
-          </div>
-          <a
-            class="font-medium no-underline ml-2 text-primary text-right cursor-pointer"
-            @click="handbackpassword"
-            >Forgot password?</a
-          >
-        </div>
-
-        <Button label="Sign In" icon="pi pi-user" class="w-full" @click="handleLogin" />
-
-        <div class="text-center mt-4">
-          <span class="text-surface-600 dark:text-surface-200">Or sign in with:</span>
-          <div class="flex justify-center mt-2">
-            <Button label="Google" icon="pi pi-google" class="mr-2" />
-            <Button label="Facebook" icon="pi pi-facebook" />
-          </div>
-        </div>
-      </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import axios from '@/axios'
-import Button from 'primevue/button'
-import Checkbox from 'primevue/checkbox'
-import InputText from 'primevue/inputtext'
-import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import type { LoginData, Response } from '@/types'
+import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
+import { reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-// 定义表单相关数据
-const name = ref<string>('') // 用户输入的用户名
-const password = ref<string>('') // 用户输入的密码
-const rememberMe = ref<boolean>(false) // 是否勾选记住我
-const errorMessage = ref<string>('') // 登录失败提示信息
+interface LoginForm {
+  name: string
+  password: string
+}
+
+const form = reactive<LoginForm>({
+  name: '',
+  password: '',
+})
+
+const isSubmitting = ref(false)
+const errorMessage = ref('')
+
+const userStore = useUserStore()
 const router = useRouter()
+const route = useRoute()
 
-// 登录处理逻辑
-const handleLogin = async (): Promise<void> => {
-  if (!name.value || !password.value) {
+const goToBackPassword = () => {
+  errorMessage.value = ''
+  void router.push({ name: 'backpassword' })
+}
+
+const goToRegister = () => {
+  errorMessage.value = ''
+  void router.push({ name: 'register' })
+}
+
+const getRedirectPath = () => {
+  const redirect = route.query.redirect
+  return typeof redirect === 'string' && redirect.length > 0 ? redirect : '/questions'
+}
+
+const handleLogin = async () => {
+  if (!form.name.trim() || !form.password) {
     errorMessage.value = 'Please fill in all fields'
     return
   }
 
+  isSubmitting.value = true
+  errorMessage.value = ''
+
   try {
-    const response = await axios.post('/login', {
-      name: name.value,
-      password: password.value,
+    const response = await axios.post<Response<LoginData>>('/login', {
+      name: form.name.trim(),
+      password: form.password,
     })
 
-    if (response.data.code === 200) {
-      // 登录成功，保存 token 到 localStorage
-      localStorage.setItem('token', response.data.data.token)
-      localStorage.setItem('username', response.data.data.user.name)
-      localStorage.setItem('user_id', response.data.data.user.user_id)
-      localStorage.setItem('email', response.data.data.user.email)
-      localStorage.setItem('role', response.data.data.user.role)
-
-      const user = useUserStore()
-      user.user.token = response.data.data.token
-      user.user.name = response.data.data.user.name
-      user.user.user_id = response.data.data.user.user_id
-      user.user.role = response.data.data.user.role
-      user.user.email = response.data.data.user.email
-
-      // alert('Login successful!');
-      errorMessage.value = ''
-      // 跳转到主页
-      router.push('/questions')
-    } else {
-      // 登录失败，显示错误信息
-      errorMessage.value = response.data.info || 'Invalid email or password'
+    const loginData = response.data.data
+    if (!loginData?.token || !loginData.user) {
+      throw new Error(response.data.info || 'Login response is invalid')
     }
+
+    userStore.setUser({
+      name: loginData.user.name,
+      user_id: loginData.user.user_id,
+      token: loginData.token,
+      email: loginData.user.email,
+      role: loginData.user.role,
+    })
+
+    await router.push(getRedirectPath())
   } catch (error) {
-    console.error('Login failed:', error)
-    // 错误处理
-    errorMessage.value = 'Unable to connect to the server, please try again later'
+    errorMessage.value = error instanceof Error ? error.message : 'Login failed, please try again'
+  } finally {
+    isSubmitting.value = false
   }
 }
-
-// 找回密码处理
-const handbackpassword = (): void => {
-  // 清除任何错误消息
-  errorMessage.value = ''
-  // 跳转到找回密码页面
-  router.push('/backpassword')
-}
-
-// 注册处理
-const handregister = (): void => {
-  // 清除任何错误消息
-  errorMessage.value = ''
-  // 跳转到注册页面
-  router.push('/register')
-}
 </script>
-
-<style scoped>
-/* 自定义样式可在此处添加 */
-</style>

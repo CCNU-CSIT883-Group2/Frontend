@@ -24,7 +24,7 @@
         class="h-4 w-fit rounded px-2.5 py-0.5 flex items-center font-light text-xsm dark:text-surface-300"
       >
         <span class="select-none" v-tooltip="props.title">
-          {{ props.title.length > 15 ? props.title.slice(0, 15) + '...' : props.title }}
+          {{ previewTitle }}
         </span>
       </div>
     </div>
@@ -43,6 +43,7 @@
 <script setup lang="ts">
 import CircleProgressBar from '@/components/CircleProgressBar.vue'
 import { useDateFormat } from '@vueuse/core'
+import { computed } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -59,6 +60,9 @@ const props = withDefaults(
 )
 
 const date = useDateFormat(props.date, 'MMM DD', { locales: 'en-US' })
+const previewTitle = computed(() =>
+  props.title.length > 15 ? `${props.title.slice(0, 15)}...` : props.title,
+)
 </script>
 
 <style scoped></style>

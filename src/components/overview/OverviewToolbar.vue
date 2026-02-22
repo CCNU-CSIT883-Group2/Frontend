@@ -2,9 +2,22 @@
   <div class="flex items-center justify-between gap-3 flex-wrap">
     <div class="flex items-center gap-2">
       <label for="subjects" class="text-sm text-surface-600 dark:text-surface-300">Subject</label>
-      <Select id="subjects" v-model="subjectProxy" :options="subjects" placeholder="Select subject" class="w-60" />
+      <Select
+        id="subjects"
+        v-model="subjectProxy"
+        :options="subjects"
+        :disabled="subjects.length === 0"
+        placeholder="Select subject"
+        class="w-60"
+      />
     </div>
-    <Button label="Share" icon="pi pi-share-alt" severity="secondary" @click="emit('share')" />
+    <Button
+      label="Share"
+      icon="pi pi-share-alt"
+      severity="secondary"
+      :disabled="subjects.length === 0"
+      @click="emit('share')"
+    />
   </div>
 </template>
 

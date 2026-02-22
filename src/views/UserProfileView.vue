@@ -3,151 +3,106 @@
     <div
       class="bg-surface-0 dark:bg-surface-900 shadow-lg rounded-lg w-full max-w-6xl flex flex-col items-center p-6"
     >
-      <!-- Main Content -->
       <div class="flex-1 md:mr-10">
         <div class="bg-surface-0 dark:bg-surface-950 p-2 w-[800px] rounded-lg">
-          <div class="font-medium text-4xl text-surface-900 dark:text-surface-0 mb-6">
-            User Dashboard
-          </div>
+          <div class="font-medium text-4xl text-surface-900 dark:text-surface-0 mb-6">User Dashboard</div>
           <div class="text-surface-500 dark:text-surface-300 mb-10">
             Manage your profile, track progress, and explore more features.
           </div>
 
-          <!-- User Information Container -->
           <div class="bg-surface-100 dark:bg-surface-800 p-8 rounded-lg mb-6">
             <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div
-                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
-              >
+              <div class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg">
                 Role
               </div>
               <div class="text-surface-900 dark:text-surface-0 w-full md:w-8/12">
                 {{ user.role }}
               </div>
             </li>
-            <!-- Name -->
-            <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div
-                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
-              >
-                Name
-              </div>
-              <div
-                v-if="!editingName"
-                class="text-surface-900 dark:text-surface-0 w-full md:w-8/12"
-              >
-                {{ newName }}
-              </div>
-              <div v-else class="w-full md:w-8/12">
-                <input-text v-model="newName" type="text" class="input-field w-full h-10 text-lg" />
-              </div>
-              <div class="w-6/12 md:w-2/12 flex justify-end">
-                <Button
-                  label="Edit"
-                  icon="pi pi-pencil"
-                  text
-                  v-if="!editingName"
-                  @click="toggleEdit('name')"
-                />
-                <Button label="Save" icon="pi pi-check" text v-else @click="saveNewName" />
-              </div>
-            </li>
-            <!-- Email -->
-            <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div
-                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
-              >
-                Email
-              </div>
-              <div
-                v-if="!editingEmail"
-                class="text-surface-900 dark:text-surface-0 w-full md:w-8/12"
-              >
-                {{ newEmail }}
-              </div>
-              <div v-else class="w-full md:w-8/12">
-                <input-text
-                  v-model="newEmail"
-                  type="email"
-                  class="input-field w-full h-10 text-lg"
-                />
-              </div>
-              <div class="w-6/12 md:w-2/12 flex justify-end">
-                <Button
-                  label="Edit"
-                  icon="pi pi-pencil"
-                  text
-                  v-if="!editingEmail"
-                  @click="toggleEdit('email')"
-                />
-                <Button label="Save" icon="pi pi-check" text v-else @click="saveNewEmail" />
-              </div>
-            </li>
 
-            <!-- New Password -->
+            <ProfileEditableRow
+              label="Name"
+              v-model="form.name"
+              :editing="editingName"
+              @toggle="editingName = true"
+              @save="saveName"
+            />
+
+            <ProfileEditableRow
+              label="Email"
+              v-model="form.email"
+              :editing="editingEmail"
+              type="email"
+              @toggle="editingEmail = true"
+              @save="saveEmail"
+            />
+
             <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div
-                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
-              >
+              <div class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg">
                 New Password
               </div>
               <div class="w-full md:w-8/12">
-                <input-text
-                  v-model="newPassword"
+                <InputText
+                  v-model="form.newPassword"
                   type="password"
-                  class="input-field mb-3 h-10 w-full text-lg"
+                  class="mb-3 h-10 w-full text-lg"
                   placeholder="New Password"
-                  @input="checkPasswordStrength"
                 />
               </div>
-              <div v-if="newPassword.length > 0" class="mt-2 w-full md:w-8/12">
-                <!-- Password Strength -->
-                <div class="text-sm mb-2 flex items-center justify-center">Password Strength</div>
+              <div v-if="form.newPassword" class="mt-2 w-full md:w-8/12">
+                <div class="text-sm mb-2 flex items-center justify-center">
+                  Password Strength: {{ passwordStrength.label }}
+                </div>
                 <div class="h-2 rounded-full w-full bg-gray-200">
                   <div
-                    :class="passwordStrengthStyle.backgroundColor"
-                    :style="{ width: passwordStrengthStyle.width }"
-                    class="h-full rounded-full"
+                    class="h-full rounded-full transition-all"
+                    :class="passwordStrength.color"
+                    :style="{ width: passwordStrength.width }"
                   ></div>
                 </div>
               </div>
             </li>
 
-            <!-- Confirm New Password -->
             <li class="flex items-center py-5 px-3 border-t border-surface flex-wrap">
-              <div
-                class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg"
-              >
+              <div class="text-surface-500 dark:text-surface-300 w-6/12 md:w-2/12 font-medium text-lg">
                 Confirm Password
               </div>
               <div class="w-full md:w-8/12">
-                <input-text
-                  v-model="confirmPassword"
+                <InputText
+                  v-model="form.confirmPassword"
                   type="password"
-                  class="input-field mb-3 w-full h-10 text-lg"
+                  class="mb-3 w-full h-10 text-lg"
                   placeholder="Confirm Password"
                 />
               </div>
-              <div v-if="confirmPassword.length > 0" class="mt-1 w-full md:w-8/12">
-                <!-- Password Match Status -->
+              <div v-if="form.confirmPassword" class="mt-1 w-full md:w-8/12 text-sm">
                 <span
-                  v-if="newPassword === confirmPassword"
-                  class="text-green-600 text-sm flex items-center justify-center"
-                  >✔️ Passwords match</span
+                  v-if="!passwordMismatch"
+                  class="text-green-600 flex items-center justify-center"
                 >
-                <span v-else class="text-red-600 text-sm flex items-center justify-center"
-                  >Passwords do not match</span
-                >
+                  Passwords match
+                </span>
+                <span v-else class="text-red-600 flex items-center justify-center">
+                  Passwords do not match
+                </span>
               </div>
             </li>
           </div>
-          <!-- Submit and logout Button -->
+
+          <Message v-if="errorMessage" severity="error" :closable="false" class="mb-4">
+            {{ errorMessage }}
+          </Message>
+          <Message v-if="successMessage" severity="success" :closable="false" class="mb-4">
+            {{ successMessage }}
+          </Message>
+
           <div class="flex justify-center mt-4 space-x-4">
             <Button
               label="Save Changes"
               icon="pi pi-check"
               text
-              :disabled="!canSavePassword"
+              :loading="isSaving"
+              :disabled="isSaving || !canSave"
               @click="saveAllChanges"
             />
             <Button
@@ -155,6 +110,8 @@
               icon="pi pi-sign-out"
               text
               class="p-button-danger"
+              :loading="isLoggingOut"
+              :disabled="isLoggingOut"
               @click="logout"
             />
           </div>
@@ -165,139 +122,145 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import axios from '@/axios'
+import ProfileEditableRow from '@/components/profile/ProfileEditableRow.vue'
 import { useUserStore } from '@/stores/user'
+import type { ProfileUpdateRequest, Response } from '@/types'
+import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 import { storeToRefs } from 'pinia'
-import router from '@/router'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
-const { user } = storeToRefs(useUserStore())
-
-// Define reactive variables for the new user information
-const newName = ref(user.value.name)
-const newEmail = ref(user.value.email)
-const newPassword = ref('')
-const confirmPassword = ref('')
-const oldName = ref(user.value.name)
-const oldEmail = ref(user.value.email)
-
-// Password strength logic
-const passwordStrengthStyle = computed(() => {
-  let strength = 0
-  const length = newPassword.value.length
-  if (length >= 8) strength += 1
-  if (/[A-Z]/.test(newPassword.value)) strength += 1
-  if (/[0-9]/.test(newPassword.value)) strength += 1
-  if (/[!@#$%^&*(),.?":{}|<>]/.test(newPassword.value)) strength += 1
-
-  const colors = ['bg-red-500', 'bg-yellow-500', 'bg-green-500']
-  const width = (strength / 4) * 100
-  return { backgroundColor: colors[strength - 1] || 'bg-gray-200', width: `${width}%` }
-})
-
-// Validation for confirm password
-const passwordsMatch = computed(() => newPassword.value === confirmPassword.value)
-
-// Function to handle toggling edit state
-const editingName = ref(false)
-const editingEmail = ref(false)
-const toggleEdit = (field: string): void => {
-  if (field === 'name') editingName.value = !editingName.value
-  if (field === 'email') editingEmail.value = !editingEmail.value
+interface ProfileForm {
+  name: string
+  email: string
+  newPassword: string
+  confirmPassword: string
 }
 
-// Function to save name
-const saveNewName = () => {
+const userStore = useUserStore()
+const { user } = storeToRefs(userStore)
+const router = useRouter()
+
+const form = reactive<ProfileForm>({
+  name: user.value.name,
+  email: user.value.email,
+  newPassword: '',
+  confirmPassword: '',
+})
+
+const editingName = ref(false)
+const editingEmail = ref(false)
+const isSaving = ref(false)
+const isLoggingOut = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
+
+watch(
+  () => [user.value.name, user.value.email],
+  ([name, email]) => {
+    if (!editingName.value) form.name = name
+    if (!editingEmail.value) form.email = email
+  },
+)
+
+const passwordMismatch = computed(() => form.newPassword !== form.confirmPassword)
+
+const passwordStrength = computed(() => {
+  let strength = 0
+  if (form.newPassword.length >= 8) strength += 1
+  if (/[A-Z]/.test(form.newPassword)) strength += 1
+  if (/[0-9]/.test(form.newPassword)) strength += 1
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(form.newPassword)) strength += 1
+
+  if (strength <= 1) return { color: 'bg-red-500', width: '25%', label: 'Weak' }
+  if (strength === 2) return { color: 'bg-orange-500', width: '50%', label: 'Fair' }
+  if (strength === 3) return { color: 'bg-blue-500', width: '75%', label: 'Good' }
+  return { color: 'bg-green-500', width: '100%', label: 'Strong' }
+})
+
+const hasProfileChanges = computed(() => {
+  return form.name.trim() !== user.value.name || form.email.trim() !== user.value.email
+})
+
+const hasPasswordChanges = computed(() => {
+  return (
+    form.newPassword.length > 0 &&
+    form.confirmPassword.length > 0 &&
+    !passwordMismatch.value
+  )
+})
+
+const canSave = computed(() => hasProfileChanges.value || hasPasswordChanges.value)
+
+const saveName = () => {
+  form.name = form.name.trim()
   editingName.value = false
 }
 
-// Function to save email
-const saveNewEmail = () => {
+const saveEmail = () => {
+  form.email = form.email.trim()
   editingEmail.value = false
 }
 
-// Function to handle the save action for all changes
-const saveAllChanges = async (): Promise<void> => {
-  try {
-    const data = {
-      name: oldName.value,
-      new_name: newName.value !== oldName.value ? newName.value : null,
-      new_email: newEmail.value !== oldEmail.value ? newEmail.value : null,
-      new_password: newPassword.value ? newPassword.value : null,
-    }
-
-    // Make sure data isn't empty
-    if (data.new_name || data.new_email || data.new_password) {
-      const response = await axios.post('/profile', data)
-
-      if (response.data.code === 200) {
-        alert('User information saved successfully!')
-        // Update the store with new data
-        if (data.new_name) {
-          user.value.name = data.new_name
-          oldName.value = data.new_name
-          localStorage.setItem('username', data.new_name)
-        }
-        if (data.new_email) {
-          user.value.email = data.new_email
-          oldEmail.value = data.new_email
-          localStorage.setItem('email', data.new_email)
-        }
-        localStorage.setItem('role', user.value.role)
-        // Reset password fields
-        newPassword.value = ''
-        confirmPassword.value = ''
-        router.push('/profile')
-      } else {
-        alert('Failed to save user information.')
-      }
-    }
-  } catch (error) {
-    console.error('Error saving user info:', error)
-  }
-}
-//登出函数清除token,userstore信息以及localstorage信息
-const logout = async () => {
-  try {
-    // 第一步：向后端发送登出请求
-    const response = await axios.post('/logout')
-
-    if (response.data.code === 200) {
-      // 第二步：手动重置 store 中的值
-      const userStore = useUserStore()
-      userStore.user.name = ''
-      userStore.user.user_id = ''
-      userStore.user.email = ''
-      userStore.user.role = ''
-      userStore.user.token = ''
-
-      // 第三步：清除 localStorage 中的缓存数据
-      localStorage.removeItem('username')
-      localStorage.removeItem('user_id')
-      localStorage.removeItem('email')
-      localStorage.removeItem('role')
-      localStorage.removeItem('token') // 确保清除 token
-
-      // 第四步：重定向到入口页面
-      router.push('/')
-    } else {
-      alert('登出失败')
-    }
-  } catch (error) {
-    console.error('登出错误:', error)
-    alert('登出过程中出现错误')
-  }
-}
-// Function to handle the password strength
-const checkPasswordStrength = () => {
-  // You can add custom logic to handle password strength here if necessary
-}
-
-const canSavePassword = computed(() => {
-  const profileChanged = newName.value !== oldName.value || newEmail.value !== oldEmail.value
-  const passwordReady =
-    newPassword.value.length > 0 && confirmPassword.value.length > 0 && passwordsMatch.value
-
-  return profileChanged || passwordReady
+const buildUpdatePayload = (): ProfileUpdateRequest => ({
+  name: user.value.name,
+  new_name: form.name.trim() !== user.value.name ? form.name.trim() : null,
+  new_email: form.email.trim() !== user.value.email ? form.email.trim() : null,
+  new_password: hasPasswordChanges.value ? form.newPassword : null,
 })
+
+const clearMessages = () => {
+  errorMessage.value = ''
+  successMessage.value = ''
+}
+
+const saveAllChanges = async () => {
+  if (!canSave.value) return
+
+  const payload = buildUpdatePayload()
+  if (!payload.new_name && !payload.new_email && !payload.new_password) return
+
+  isSaving.value = true
+  clearMessages()
+
+  try {
+    const response = await axios.post<Response<unknown>>('/profile', payload)
+    if (response.data.code !== 200) {
+      throw new Error(response.data.info || 'Failed to save profile')
+    }
+
+    userStore.patchUser({
+      name: payload.new_name ?? user.value.name,
+      email: payload.new_email ?? user.value.email,
+    })
+
+    form.newPassword = ''
+    form.confirmPassword = ''
+    editingName.value = false
+    editingEmail.value = false
+    successMessage.value = response.data.info || 'Profile updated successfully'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to save profile'
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const logout = async () => {
+  isLoggingOut.value = true
+  clearMessages()
+
+  try {
+    await axios.post('/logout')
+  } catch {
+    // Keep local logout flow even if server logout fails.
+  } finally {
+    userStore.clearUser()
+    isLoggingOut.value = false
+    await router.push({ name: 'login' })
+  }
+}
 </script>

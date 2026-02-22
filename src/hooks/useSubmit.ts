@@ -5,35 +5,42 @@ import axios from '@/axios'
 import type { AttemptPostData, Response } from '@/types'
 
 export function useSubmit(
-  history_id: number,
+  historyId: number,
   type: string,
-  question_ids: number[],
+  questionIds: number[],
   answers: number[][],
 ) {
   const { name } = storeToRefs(useUserStore())
 
-  const isFetching = ref(question_ids.length)
-  const error = ref('')
+  const pendingCount = ref(questionIds.length)
+  const error = ref<string | null>(null)
   const answered = reactive<Map<number, boolean>>(new Map())
 
-  for (let i = 0; i < question_ids.length; i++) {
+  if (questionIds.length === 0) {
+    pendingCount.value = 0
+    return { answered, error, isFetching: pendingCount }
+  }
+
+  const submitRequest = (questionId: number, choiceAnswers: number[]) =>
     axios
       .post<Response<AttemptPostData>>('/attempt', {
         username: name.value,
-        history_id: history_id,
-        question_id: question_ids[i],
+        history_id: historyId,
+        question_id: questionId,
         type,
-        choice_answers: answers[i],
+        choice_answers: choiceAnswers,
       })
       .then((response) => {
         answered.set(response.data.data.attempt.question_id, true)
-        isFetching.value--
       })
       .catch((err) => {
-        error.value = err.toString()
-        isFetching.value--
+        error.value = err instanceof Error ? err.message : String(err)
       })
-  }
+      .finally(() => {
+        pendingCount.value -= 1
+      })
 
-  return { answered, error, isFetching }
+  void Promise.allSettled(questionIds.map((questionId, index) => submitRequest(questionId, answers[index])))
+
+  return { answered, error, isFetching: pendingCount }
 }

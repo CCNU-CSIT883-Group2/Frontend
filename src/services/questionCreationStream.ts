@@ -14,6 +14,7 @@ interface StreamQuestionCreationOptions {
   baseUrl: string
   token: string
   payload: CreateQuestionRequest
+  signal?: AbortSignal
   onStart?: (payload: QuestionsCreateStreamStart) => void
   onProgress?: (payload: QuestionsCreateStreamProgress) => void
   onDone?: (payload: QuestionsCreateStreamDonePayload) => void
@@ -52,6 +53,7 @@ export async function streamQuestionCreation({
   baseUrl,
   token,
   payload,
+  signal,
   onStart,
   onProgress,
   onDone,
@@ -69,6 +71,7 @@ export async function streamQuestionCreation({
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
+    signal,
   })
 
   if (!response.ok) {
@@ -85,6 +88,26 @@ export async function streamQuestionCreation({
   let buffer = ''
   let streamDone = false
 
+  const processBlock = (block: string) => {
+    const event = parseSseBlock(block)
+    if (!event) return
+
+    if (event.eventName === 'start') {
+      onStart?.(event.payload as QuestionsCreateStreamStart)
+      return
+    }
+
+    if (event.eventName === 'progress') {
+      onProgress?.(event.payload as QuestionsCreateStreamProgress)
+      return
+    }
+
+    if (event.eventName === 'done') {
+      onDone?.(event.payload as QuestionsCreateStreamDonePayload)
+      streamDone = true
+    }
+  }
+
   while (true) {
     const { value, done } = await reader.read()
     if (done) break
@@ -95,28 +118,14 @@ export async function streamQuestionCreation({
     while (boundary !== -1) {
       const block = buffer.slice(0, boundary).replace(/\r/g, '')
       buffer = buffer.slice(boundary + 2)
-
-      const event = parseSseBlock(block)
-      if (!event) {
-        boundary = buffer.indexOf('\n\n')
-        continue
-      }
-
-      if (event.eventName === 'start') {
-        onStart?.(event.payload as QuestionsCreateStreamStart)
-      }
-
-      if (event.eventName === 'progress') {
-        onProgress?.(event.payload as QuestionsCreateStreamProgress)
-      }
-
-      if (event.eventName === 'done') {
-        onDone?.(event.payload as QuestionsCreateStreamDonePayload)
-        streamDone = true
-      }
-
+      processBlock(block)
       boundary = buffer.indexOf('\n\n')
     }
+  }
+
+  const tail = buffer.trim().replace(/\r/g, '')
+  if (tail) {
+    processBlock(tail)
   }
 
   if (!streamDone) {

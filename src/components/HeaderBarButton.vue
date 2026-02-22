@@ -22,32 +22,31 @@
 
 <script setup lang="ts">
 import { useElementHover } from '@vueuse/core'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const {
-  icon,
+  icon = '',
   to = '',
   size = 1,
   iconDefaultClass = 'text-surface-900 dark:text-surface-500',
   iconHoverClass = 'text-surface-500 dark:text-surface-400',
-} = defineProps({
-  icon: String,
-  to: String,
-  size: Number,
-  iconDefaultClass: String,
-  iconHoverClass: String,
-})
+} = defineProps<{
+  icon?: string
+  to?: string
+  size?: number
+  iconDefaultClass?: string
+  iconHoverClass?: string
+}>()
 
-const button = ref()
+const button = ref<HTMLElement | null>(null)
 const isHovered = useElementHover(button)
 
 const router = useRouter()
 
 const goToTargetPage = () => {
-  if (to !== '') {
-    router.push({ name: to })
-  }
+  if (!to) return
+  void router.push({ name: to })
 }
 
 const isRouterMatched = computed(() => router.currentRoute.value.name === to)

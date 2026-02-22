@@ -4,31 +4,29 @@ import axios from '@/axios'
 
 export function useQuestions(historyID: number) {
   const isFetching = ref(true)
-  const questions = shallowRef([] as Question[])
-  const error = ref('')
+  const questions = shallowRef<Question[]>([])
+  const error = ref<string | null>(null)
 
   const controller = new AbortController()
-  const signal = controller.signal
 
-  axios
-    .get<Response<Question[]>>(`/questions`, {
-      params: { history_id: historyID },
-      signal,
-    })
-    .then((response) => {
+  const fetchQuestions = async () => {
+    try {
+      const response = await axios.get<Response<Question[]>>(`/questions`, {
+        params: { history_id: historyID },
+        signal: controller.signal,
+      })
       questions.value = response.data.data ?? []
-    })
-    .catch((err) => {
-      error.value = err.toString()
-    })
-    .finally(() => {
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
+    } finally {
       isFetching.value = false
-    })
+    }
+  }
+
+  void fetchQuestions()
 
   const cancel = () => {
-    if (controller) {
-      controller.abort()
-    }
+    controller.abort()
   }
 
   return { questions, error, isFetching, cancel }

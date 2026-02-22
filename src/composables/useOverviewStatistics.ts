@@ -10,10 +10,6 @@ import { useRoute, useRouter } from 'vue-router'
 const PIE_COLORS = ['#FF8C97', '#5F91C4', '#FFB732', '#65B3A1', '#845EC2', '#2C73D2']
 const PIE_HOVER_COLORS = ['#FFB2C3', '#7DAFDC', '#FFCF6D', '#80C9B5', '#9B7BCE', '#4C8DDD']
 
-function sumAttempts(dailyStatistics: DailyStatistics[]) {
-  return dailyStatistics.reduce((total, item) => total + item.total_attempts, 0)
-}
-
 interface UseOverviewStatisticsResult {
   selectedSubject: Ref<string>
   subjects: Ref<string[]>
@@ -27,6 +23,9 @@ interface UseOverviewStatisticsResult {
   shareCurrentStatistics: () => Promise<void>
 }
 
+const sumAttempts = (dailyStatistics: DailyStatistics[]) =>
+  dailyStatistics.reduce((total, item) => total + item.total_attempts, 0)
+
 export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const route = useRoute()
   const router = useRouter()
@@ -35,20 +34,15 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const { subjects } = storeToRefs(historyStore)
 
   const username = ref(localStorage.getItem('username') ?? '')
-  const selectedSubject = ref<string>('')
+  const selectedSubject = ref('')
   const isLoading = ref(false)
   const errorMessage = ref('')
+  const latestRequestId = ref(0)
 
-  const lineChartData = ref<ChartData<'line'>>({
-    labels: [],
-    datasets: [],
-  })
+  const lineChartData = ref<ChartData<'line'>>({ labels: [], datasets: [] })
   const lineChartOptions = ref<ChartOptions<'line'>>({})
 
-  const pieChartData = ref<ChartData<'pie', number[], string>>({
-    labels: [],
-    datasets: [],
-  })
+  const pieChartData = ref<ChartData<'pie', number[], string>>({ labels: [], datasets: [] })
   const pieChartOptions = ref<ChartOptions<'pie'>>({})
 
   const routeSubject = computed(() =>
@@ -58,11 +52,14 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const hasSubjectOptions = computed(() => subjects.value.length > 0)
 
   const ensureValidSubject = () => {
-    if (!subjects.value.length) return
+    if (subjects.value.length === 0) {
+      selectedSubject.value = ''
+      return
+    }
 
-    const preferred = routeSubject.value
-    if (preferred && subjects.value.includes(preferred)) {
-      selectedSubject.value = preferred
+    const preferredSubject = routeSubject.value
+    if (preferredSubject && subjects.value.includes(preferredSubject)) {
+      selectedSubject.value = preferredSubject
       return
     }
 
@@ -80,7 +77,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
       return
     }
 
-    router.replace({
+    void router.replace({
       name: 'overview',
       query: {
         subjects: subject,
@@ -135,11 +132,11 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     }
   }
 
-  const updatePieChart = (subjectTotalAttempts: Record<string, number>) => {
+  const updatePieChart = (subjectAttemptsMap: Record<string, number>) => {
     const labels = [...subjects.value]
-    const totalAttempts = Object.values(subjectTotalAttempts).reduce((sum, attempts) => sum + attempts, 0)
+    const totalAttempts = Object.values(subjectAttemptsMap).reduce((sum, attempts) => sum + attempts, 0)
     const percentages = labels.map((subject) => {
-      const attempts = subjectTotalAttempts[subject] ?? 0
+      const attempts = subjectAttemptsMap[subject] ?? 0
       return totalAttempts > 0 ? (attempts / totalAttempts) * 100 : 0
     })
 
@@ -187,13 +184,16 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   }
 
   const refreshCharts = async () => {
-    if (!username.value || !selectedSubject.value) return
+    if (!username.value || !selectedSubject.value || subjects.value.length === 0) {
+      return
+    }
 
+    const requestId = ++latestRequestId.value
     isLoading.value = true
     errorMessage.value = ''
 
     try {
-      const [selectedDailyStatistics, allSubjectStatistics] = await Promise.all([
+      const [selectedDailyStatistics, allSubjectAttempts] = await Promise.all([
         fetchSubjectStatistics(selectedSubject.value),
         Promise.all(
           subjects.value.map(async (subject) => {
@@ -207,37 +207,51 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
         ),
       ])
 
+      if (requestId !== latestRequestId.value) {
+        return
+      }
+
       updateLineChart(selectedSubject.value, selectedDailyStatistics)
-      updatePieChart(Object.fromEntries(allSubjectStatistics))
+      updatePieChart(Object.fromEntries(allSubjectAttempts))
     } catch {
+      if (requestId !== latestRequestId.value) {
+        return
+      }
       errorMessage.value = 'Failed to load statistics. Please try again later.'
     } finally {
-      isLoading.value = false
+      if (requestId === latestRequestId.value) {
+        isLoading.value = false
+      }
     }
   }
 
   const shareCurrentStatistics = async () => {
     if (!selectedSubject.value) return
 
-    if (!navigator.share) {
-      alert('Sharing is not supported in this browser.')
+    const shareText = `Check out my stats for ${selectedSubject.value}!`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Share My Statistics',
+          text: shareText,
+          url: window.location.href,
+        })
+      } catch {
+        // user cancelled
+      }
       return
     }
 
     try {
-      await navigator.share({
-        title: 'Share My Statistics',
-        text: `Check out my stats for ${selectedSubject.value}!`,
-        url: window.location.href,
-      })
+      await navigator.clipboard.writeText(window.location.href)
+      errorMessage.value = 'Sharing is not supported. URL copied to clipboard.'
     } catch {
-      // user canceled share, ignore
+      errorMessage.value = 'Sharing is not supported in this browser.'
     }
   }
 
-  watch(subjects, () => {
-    ensureValidSubject()
-  })
+  watch(subjects, ensureValidSubject)
 
   watch(
     () => route.query.subjects,
@@ -256,9 +270,15 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     void refreshCharts()
   })
 
-  onMounted(() => {
-    historyStore.fetch()
+  onMounted(async () => {
+    const error = await historyStore.fetch()
+    if (error) {
+      errorMessage.value = error
+      return
+    }
+
     ensureValidSubject()
+    await refreshCharts()
   })
 
   return {

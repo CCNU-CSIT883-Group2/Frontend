@@ -13,9 +13,9 @@
     <div class="flex">
       <select-button
         :disabled="answered"
-        v-model="s"
+        v-model="selectedOption"
         :options="question.options"
-        :multiple="question.type == 'multi'"
+        :multiple="question.type === 'multi'"
         class="flex-1 flex flex-col"
       >
         <template #option="{ option, index }">
@@ -38,7 +38,7 @@
   </Fieldset>
 </template>
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import type { Question } from '@/types'
 import { useUserSettingsStore } from '@/stores/user'
 
@@ -56,7 +56,7 @@ const props = withDefaults(
 const reset = defineModel<boolean>('reset', { default: false })
 watch(reset, () => {
   if (reset.value) {
-    s.value = null
+    selectedOption.value = null
     reset.value = false
   }
 })
@@ -66,21 +66,40 @@ const handleClick = () => {
   isCollapsed.value = !isCollapsed.value
 }
 
-const s = ref<string | string[] | null>(null)
-watch(s, () => {
-  if (s.value === null) {
-    selected.value = []
-    return
-  }
-
-  if (props.question.type === 'single') {
-    selected.value = [props.question.options.indexOf(s.value as string)]
-  } else if (props.question.type === 'multi') {
-    selected.value = (s.value as string[]).map((v) => props.question.options.indexOf(v))
-  }
-})
-
 const selected = defineModel<number[]>('attempt', { default: [] })
+const optionIndexMap = computed(
+  () => new Map(props.question.options.map((option, index) => [option, index])),
+)
+
+const selectedOption = computed<string | string[] | null>({
+  get: () => {
+    if (selected.value.length === 0) return null
+
+    if (props.question.type === 'single') {
+      return props.question.options[selected.value[0]] ?? null
+    }
+
+    return selected.value
+      .map((index) => props.question.options[index])
+      .filter((option): option is string => option !== undefined)
+  },
+  set: (value) => {
+    if (value === null) {
+      selected.value = []
+      return
+    }
+
+    if (props.question.type === 'single') {
+      const optionIndex = optionIndexMap.value.get(value as string)
+      selected.value = optionIndex === undefined ? [] : [optionIndex]
+      return
+    }
+
+    selected.value = (value as string[])
+      .map((option) => optionIndexMap.value.get(option))
+      .filter((index): index is number => index !== undefined)
+  },
+})
 
 const isCorrectOption = (index: number) => {
   return (

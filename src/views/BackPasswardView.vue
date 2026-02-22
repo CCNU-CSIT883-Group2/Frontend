@@ -1,147 +1,221 @@
 <template>
-  <!-- 最外层容器，确保内容居中 -->
   <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center">
     <div class="bg-surface-0 dark:bg-surface-900 p-12 shadow-lg rounded-lg w-full max-w-3xl">
-      <!-- 内容 -->
       <div class="text-center mb-8">
-        <svg class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16" viewBox="0 0 30 32" fill="none"
-             xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd"
-                d="M20.7207 6.18211L14.9944 3.11148L3.46855 9.28678L0.579749 7.73444L14.9944 0L23.6242 4.62977L20.7207 6.18211ZM14.9996 12.3574L26.5182 6.1821L29.4216 7.73443L14.9996 15.4621L6.37724 10.8391L9.27337 9.28677L14.9996 12.3574ZM2.89613 16.572L0 15.0196V24.2656L14.4147 32V28.8953L2.89613 22.7132V16.572ZM11.5185 18.09L0 11.9147V8.81001L14.4147 16.5376V25.7904L11.5185 24.2312V18.09ZM24.2086 15.0194V11.9147L15.5788 16.5377V31.9998L18.475 30.4474V18.09L24.2086 15.0194ZM27.0969 22.7129V10.3623L30.0004 8.81V24.2653L21.3706 28.895V25.7904L27.0969 22.7129Z" />
+        <svg
+          class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16"
+          viewBox="0 0 30 32"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            clip-rule="evenodd"
+            d="M20.7207 6.18211L14.9944 3.11148L3.46855 9.28678L0.579749 7.73444L14.9944 0L23.6242 4.62977L20.7207 6.18211ZM14.9996 12.3574L26.5182 6.1821L29.4216 7.73443L14.9996 15.4621L6.37724 10.8391L9.27337 9.28677L14.9996 12.3574ZM2.89613 16.572L0 15.0196V24.2656L14.4147 32V28.8953L2.89613 22.7132V16.572ZM11.5185 18.09L0 11.9147V8.81001L14.4147 16.5376V25.7904L11.5185 24.2312V18.09ZM24.2086 15.0194V11.9147L15.5788 16.5377V31.9998L18.475 30.4474V18.09L24.2086 15.0194ZM27.0969 22.7129V10.3623L30.0004 8.81V24.2653L21.3706 28.895V25.7904L27.0969 22.7129Z"
+          />
         </svg>
 
-        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome ChatCNU</div>
-        <span class="text-surface-600 dark:text-surface-200 font-medium leading-normal">Please retrieve your password</span>
-        </div>
-
-          <!-- <div class="text-center mb-4">
-              <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">
-                  {{ isRecovering ? '找回密码' : '修改密码' }}
-              </div>
-          </div> -->
-
-          <div class="space-y-2 w-full mt-2">
-              <FloatLabel variant="in" class="mb-2" v-if="isRecovering">
-                  <InputText id="Email" v-model="email" variant="filled" class="w-full" />
-                  <label for="email" >Email</label>
-              </FloatLabel>
-         </div>
-          <div class="space-y-2 w-full">
-              <FloatLabel variant="in" class="mt-4" v-if="isRecovering">
-                  <InputText id="verificationCode" v-model="verificationCode" variant="filled" class="w-full " />
-                  <label for="verificationCode" class="-mt-6">Verification Code</label>
-
-                  <div class="flex items-center mt-2">
-                      <Button label="Send verification code" @click="sendVerificationCode" :disabled="isSending" class="ml-2" />
-                      <span v-if="countdown > 0">{{ countdown }} seconds can resend it</span>
-                  </div>
-              </FloatLabel>
-
-              <Button label="Retrieve Password" v-if="isRecovering" @click="verifyCode" class="w-full mb-4" />
-
-              <FloatLabel variant="in" class="mb-4" v-if="!isRecovering">
-                  <InputText id="newPassword" v-model="newPassword" :type="showNewPassword ? 'text' : 'password'" variant="filled" class="w-full" />
-                  <label for="newPassword">新密码</label>
-                  <div class="flex items-center mt-2">
-                      <Button icon="pi pi-eye" @click="toggleNewPassword" class="mr-2" />
-                      <span>密码强度：{{ getPasswordStrength(newPassword) }}</span>
-                  </div>
-              </FloatLabel>
-
-              <FloatLabel variant="in" class="mb-4" v-else>
-                  <InputText id="confirmPassword" v-model="confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" variant="filled" class="w-full" />
-                  <label for="confirmPassword">Confirm Password</label>
-              </FloatLabel>
-
-              <div v-if="passwordMismatch" class="text-red-600 mb-2">密码不一致，请重新输入。</div>
-
-              <Button label="Confirm Modification" v-if="!isRecovering" @click="confirmModification" class="w-full" />
-          </div>
+        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Password Recovery</div>
+        <span class="text-surface-600 dark:text-surface-200 font-medium leading-normal">
+          Recover your account with verification code
+        </span>
       </div>
+
+      <div class="space-y-4 w-full">
+        <template v-if="isRecovering">
+          <FloatLabel variant="in">
+            <InputText id="email" v-model="email" variant="filled" class="w-full" />
+            <label for="email">Email</label>
+          </FloatLabel>
+
+          <FloatLabel variant="in">
+            <InputText
+              id="verification-code"
+              v-model="verificationCode"
+              variant="filled"
+              class="w-full"
+            />
+            <label for="verification-code">Verification Code</label>
+          </FloatLabel>
+
+          <div class="flex items-center gap-3">
+            <Button
+              label="Send Verification Code"
+              @click="sendVerificationCode"
+              :disabled="isSending || !email.trim()"
+            />
+            <span v-if="countdown > 0" class="text-sm text-surface-600 dark:text-surface-300">
+              {{ countdown }}s before resend
+            </span>
+          </div>
+
+          <Button label="Verify Code" class="w-full" @click="verifyCode" />
+        </template>
+
+        <template v-else>
+          <FloatLabel variant="in">
+            <InputText
+              id="new-password"
+              v-model="newPassword"
+              :type="showNewPassword ? 'text' : 'password'"
+              variant="filled"
+              class="w-full"
+            />
+            <label for="new-password">New Password</label>
+          </FloatLabel>
+
+          <div class="flex items-center gap-2 text-sm">
+            <Button
+              icon="pi pi-eye"
+              severity="secondary"
+              outlined
+              @click="showNewPassword = !showNewPassword"
+            />
+            <span>Password strength: {{ passwordStrength }}</span>
+          </div>
+
+          <FloatLabel variant="in">
+            <InputText
+              id="confirm-password"
+              v-model="confirmPassword"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              variant="filled"
+              class="w-full"
+            />
+            <label for="confirm-password">Confirm Password</label>
+          </FloatLabel>
+
+          <div class="flex items-center gap-2 text-sm">
+            <Button
+              icon="pi pi-eye"
+              severity="secondary"
+              outlined
+              @click="showConfirmPassword = !showConfirmPassword"
+            />
+            <span>Toggle confirm password visibility</span>
+          </div>
+
+          <Message v-if="passwordMismatch" severity="error" :closable="false">
+            Passwords do not match.
+          </Message>
+
+          <Button label="Confirm Reset" class="w-full" @click="confirmModification" />
+        </template>
+
+        <Message v-if="message" :severity="messageSeverity" :closable="false">{{ message }}</Message>
+      </div>
+    </div>
   </div>
 </template>
 
+<script setup lang="ts">
+import Button from 'primevue/button'
+import FloatLabel from 'primevue/floatlabel'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
+import { computed, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const email = ref('')
+const verificationCode = ref('')
+const countdown = ref(0)
+const isSending = ref(false)
+const isRecovering = ref(true)
+const newPassword = ref('')
+const confirmPassword = ref('')
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+const message = ref('')
+const messageSeverity = ref<'success' | 'error' | 'info'>('info')
 
-<script lang="ts">
-  export default {
-  data() {
-      return {
-          email: '',
-          verificationCode: '',
-          countdown: 0,
-          isSending: false,
-          isRecovering: true,
-          newPassword: '',
-          confirmPassword: '',
-          showNewPassword: false,
-          showConfirmPassword: false,
-      };
-  },
-  computed: {
-      passwordMismatch() {
-          return this.newPassword && this.confirmPassword && this.newPassword !== this.confirmPassword;
-      },
-  },
-  methods: {
-      sendVerificationCode() {
-          this.isSending = true;
-          this.countdown = 60;
-          const interval = setInterval(() => {
-              if (this.countdown > 0) {
-                  this.countdown--;
-              } else {
-                  clearInterval(interval);
-                  this.isSending = false;
-              }
-          }, 1000);
-          console.log('验证码已发送至', this.email);
-      },
-      verifyCode() {
-          if (this.verificationCode === '123456') { // 假设验证码为123456
-              console.log('验证码验证通过');
-              this.isRecovering = false; // 进入修改密码界面
-          } else {
-              alert('验证码错误，请重试。');
-          }
-      },
-      toggleNewPassword() {
-          this.showNewPassword = !this.showNewPassword;
-      },
-      toggleConfirmPassword() {
-          this.showConfirmPassword = !this.showConfirmPassword;
-      },
-      confirmModification() {
-          if (this.passwordMismatch) {
-              return;
-          }
-          console.log('修改密码', this.newPassword);
-          // 跳转到登录界面
-          this.$router.push('/login');
-      },
-      getPasswordStrength(password: string) {
-          if (password.length < 6) return '弱';
-          if (password.length < 10) return '中';
-          return '强';
-      },
-  },
-};
+const router = useRouter()
+
+let countdownTimer: number | null = null
+
+const passwordMismatch = computed(
+  () => !!newPassword.value && !!confirmPassword.value && newPassword.value !== confirmPassword.value,
+)
+
+const passwordStrength = computed(() => {
+  if (newPassword.value.length < 6) return 'Weak'
+  if (newPassword.value.length < 10) return 'Medium'
+  return 'Strong'
+})
+
+const clearMessage = () => {
+  message.value = ''
+}
+
+const startCountdown = () => {
+  countdown.value = 60
+  isSending.value = true
+
+  countdownTimer = window.setInterval(() => {
+    if (countdown.value > 0) {
+      countdown.value -= 1
+      return
+    }
+
+    if (countdownTimer) {
+      window.clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+    isSending.value = false
+  }, 1000)
+}
+
+const sendVerificationCode = () => {
+  if (!email.value.trim() || isSending.value) return
+
+  clearMessage()
+  startCountdown()
+
+  // Mock behavior only: backend integration is intentionally out of scope.
+  messageSeverity.value = 'success'
+  message.value = `Verification code sent to ${email.value.trim()}`
+}
+
+const verifyCode = () => {
+  clearMessage()
+
+  if (verificationCode.value.trim() !== '123456') {
+    messageSeverity.value = 'error'
+    message.value = 'Invalid verification code.'
+    return
+  }
+
+  messageSeverity.value = 'success'
+  message.value = 'Verification succeeded. Please set a new password.'
+  isRecovering.value = false
+}
+
+const confirmModification = () => {
+  clearMessage()
+
+  if (passwordMismatch.value) {
+    messageSeverity.value = 'error'
+    message.value = 'Passwords do not match.'
+    return
+  }
+
+  if (!newPassword.value) {
+    messageSeverity.value = 'error'
+    message.value = 'Please enter a new password.'
+    return
+  }
+
+  // Mock behavior only: backend integration is intentionally out of scope.
+  messageSeverity.value = 'success'
+  message.value = 'Password reset completed. Redirecting to login...'
+
+  setTimeout(() => {
+    void router.push({ name: 'login' })
+  }, 500)
+}
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    window.clearInterval(countdownTimer)
+  }
+})
 </script>
-
-<style scoped>
-.bg-surface-50 {
-  background-color: #f9f9f9;
-}
-
-.bg-surface-0 {
-  background-color: #ffffff;
-}
-
-.text-surface-900 {
-  color: #1f2937;
-}
-
-.text-red-600 {
-  color: #dc2626;
-}
-</style>

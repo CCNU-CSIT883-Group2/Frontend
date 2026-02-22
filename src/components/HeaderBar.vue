@@ -1,6 +1,7 @@
 <template>
   <div
-    class="h-14 flex p-4 divide-x divide-solid bg-surface-100 dark:bg-surface-800 divide-surface-300 dark:divide-surface-600 border-b border-surface-200 dark:border-surface-500">
+    class="h-14 flex p-4 divide-x divide-solid bg-surface-100 dark:bg-surface-800 divide-surface-300 dark:divide-surface-600 border-b border-surface-200 dark:border-surface-500"
+  >
     <div class="flex justify-center flex-none">
       <i class="pi pi-prime text-surface-950 dark:text-surface-400 mr-3" style="font-size: 1.5rem"></i>
     </div>
@@ -31,17 +32,17 @@
             <toggle-switch v-model="settings.questions.showTime" />
           </div>
           <div class="flex justify-between items-center">
-            <span>Show Difficulty: </span>
-            <Select :options="models" :default-value="settings.questions.generate_model"
-              v-model="settings.questions.generate_model" size="small"></Select>
+            <span>Generate Model: </span>
+            <Select
+              v-model="settings.questions.generate_model"
+              :options="models"
+              size="small"
+              class="w-36"
+            />
           </div>
         </div>
       </Dialog>
     </div>
-
-    <!--    <div class="flex justify-center" @click="() => router.push({ name: `profile` })">-->
-    <!--      <i class="pi pi-users text-surface-950 dark:text-surface-400 ml-3 text-2xl" />-->
-    <!--    </div>-->
   </div>
 </template>
 
@@ -52,18 +53,16 @@ import { useDark, useToggle } from '@vueuse/core'
 import { useUserSettingsStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
 
-
-
-const topAreaActions = ref([
+const topAreaActions = [
   { icon: 'pencil', to: 'questions' },
   { icon: 'chart-bar', to: 'overview' },
-])
+]
 
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
 
 const showSettings = ref(false)
-const models = ref(['ChatGPT', 'Kimi'])
+const models = ['ChatGPT', 'Kimi']
 
 const { settings } = storeToRefs(useUserSettingsStore())
 </script>

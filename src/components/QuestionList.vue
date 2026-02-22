@@ -2,153 +2,170 @@
   <div class="flex flex-col">
     <div class="flex justify-between mb-2 gap-2 items-center">
       <div class="flex gap-2">
-        <span class="font-bold" v-show="settings.questions.showTime">Time Used:</span>
-        <span class="font-mono" v-show="settings.questions.showTime">
+        <span v-show="settings.questions.showTime" class="font-bold">Time Used:</span>
+        <span v-show="settings.questions.showTime" class="font-mono">
           {{ Math.floor(timeUsed / 60) }}:{{ String(timeUsed % 60).padStart(2, '0') }}
         </span>
       </div>
+
       <div class="flex gap-4">
-        <Button
-          label="Submit"
-          size="small"
-          severity="primary"
-          @click="submit"
-          :disabled="disableSubmit"
-        />
+        <Button label="Submit" size="small" severity="primary" @click="submit" :disabled="disableSubmit" />
         <Button icon="pi pi-refresh" size="small" severity="secondary" @click="resetState" />
       </div>
     </div>
-    <div class="overflow-y-auto flex-1 no-scrollbar" ref="panel">
+
+    <div ref="panel" class="overflow-y-auto flex-1 no-scrollbar">
       <question-list-item
-        v-for="(q, i) in props.questions"
-        :key="q.question_id"
-        :no="i + 1"
-        :question="q"
-        class="my-2 mx-3"
+        v-for="(question, index) in props.questions"
+        :key="question.question_id"
         ref="questionRef"
-        :answered="answered[i]"
+        :no="index + 1"
+        :question="question"
+        :answered="answered[index]"
+        class="my-2 mx-3"
         v-model:reset="reset"
-        v-model:is-collapsed="collapsed[i]"
-        v-model:attempt="attempts[i]"
+        v-model:is-collapsed="collapsed[index]"
+        v-model:attempt="attempts[index]"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Question } from '@/types'
 import QuestionListItem from '@/components/QuestionListItem.vue'
-import {
-  type ComponentPublicInstance,
-  computed,
-  onMounted,
-  onUnmounted,
-  reactive,
-  ref,
-  useTemplateRef,
-  watch,
-  watchEffect,
-} from 'vue'
-import { useDebounceFn, useIntervalFn, useScroll } from '@vueuse/core'
 import { useSubmit } from '@/hooks/useSubmit'
 import { useQuestionHistoryStore } from '@/stores/useQuestionHistoryStore'
-import { storeToRefs } from 'pinia'
 import { useUserSettingsStore } from '@/stores/user'
+import type { Question } from '@/types'
+import { useDebounceFn, useIntervalFn, useScroll } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { computed, onUnmounted, ref, type ComponentPublicInstance, useTemplateRef, watch, watchEffect } from 'vue'
 
 const props = withDefaults(
   defineProps<{
-    questions?: Array<Question>
+    questions?: Question[]
   }>(),
   {
-    questions: () => [] as Array<Question>,
+    questions: () => [] as Question[],
   },
 )
 
 const answerSaved = defineModel<boolean>('answerSaved', { default: false })
+const scrollTo = defineModel<number>('scrollTo', { default: -1 })
+const attempts = defineModel<number[][]>('attempts', { default: [] })
 
-const questionRef = useTemplateRef<ComponentPublicInstance[]>('questionRef' as never)
-const questionsHeight = ref<number[]>([])
-const collapsed = reactive(Array(props.questions.length).fill(false))
-const recalculateHeight = useDebounceFn(() => {
-  scrollTo.value = -1
-  questionsHeight.value = questionRef?.value?.map((q) => q.$el.clientHeight) as number[]
-}, 500)
-watch([questionRef, collapsed], () => {
-  recalculateHeight()
-})
-
-const scrollTo = defineModel('scrollTo', { type: Number, default: -1 })
-const panel = ref<HTMLElement | null>(null)
-const { y } = useScroll(panel, { behavior: 'smooth' })
-watchEffect(() => {
-  if (scrollTo.value !== -1) {
-    y.value = questionsHeight.value.slice(0, scrollTo.value).reduce((acc, cur) => acc + cur, 0)
-  }
-})
-
-const attempts = defineModel<number[][]>('attempts', {
-  default: [] as Array<number[]>,
-})
-
+const reset = ref(false)
+const collapsed = ref<boolean[]>([])
 const answered = ref<boolean[]>([])
-watch(answerSaved, () => {
-  if (answerSaved.value) {
-    answered.value = props.questions.map(() => true)
-    handler.pause()
+
+const syncStateWithQuestions = () => {
+  const questionCount = props.questions.length
+
+  collapsed.value = Array.from({ length: questionCount }, (_, index) => collapsed.value[index] ?? false)
+
+  if (attempts.value.length !== questionCount) {
+    attempts.value = Array.from({ length: questionCount }, (_, index) => attempts.value[index] ?? [])
   }
-})
 
-const disableSubmit = computed(() => {
-  return attempts.value.some((a) => a.length === 0) || answerSaved.value
-})
-
-const submit = () => {
-  const historyStore = useQuestionHistoryStore()
-
-  const history_id = props.questions[0].history_id
-  const question_type = props.questions[0].type
-  const question_ids = props.questions.map((q) => q.question_id)
-
-  const { answered: a, isFetching } = useSubmit(
-    history_id,
-    question_type,
-    question_ids,
-    attempts.value,
-  )
-  const h = watch(isFetching, (remain) => {
-    if (remain === 0) {
-      for (let i = 0; i < question_ids.length; i++) {
-        answered.value.push(a.get(question_ids[i]) as boolean)
-      }
-      historyStore.fetch()
-      answerSaved.value = true
-      h.stop()
-    }
+  answered.value = Array.from({ length: questionCount }, (_, index) => {
+    if (answerSaved.value) return true
+    return (attempts.value[index] ?? []).length > 0
   })
 }
 
-const reset = ref(false)
+watch(
+  () => props.questions.length,
+  () => {
+    syncStateWithQuestions()
+  },
+  { immediate: true },
+)
+
+watch(
+  answerSaved,
+  (saved) => {
+    if (saved) {
+      answered.value = props.questions.map(() => true)
+      timer.pause()
+      return
+    }
+
+    answered.value = props.questions.map((_, index) => (attempts.value[index] ?? []).length > 0)
+    timer.resume()
+  },
+  { immediate: true },
+)
+
+const disableSubmit = computed(() => {
+  if (answerSaved.value) return true
+  if (props.questions.length === 0) return true
+  return attempts.value.some((attempt) => attempt.length === 0)
+})
+
+const { settings } = storeToRefs(useUserSettingsStore())
+const historyStore = useQuestionHistoryStore()
+
+const submit = () => {
+  if (disableSubmit.value) return
+
+  const firstQuestion = props.questions[0]
+  const questionIds = props.questions.map((question) => question.question_id)
+
+  const { answered: answeredMap, isFetching } = useSubmit(
+    firstQuestion.history_id,
+    firstQuestion.type,
+    questionIds,
+    attempts.value,
+  )
+
+  const stop = watch(
+    isFetching,
+    (remaining) => {
+      if (remaining !== 0) return
+
+      answered.value = questionIds.map((questionId) => answeredMap.get(questionId) === true)
+      answerSaved.value = true
+      void historyStore.fetch()
+      stop()
+    },
+    { immediate: true },
+  )
+}
 
 const resetState = () => {
-  attempts.value = Array(props.questions.length).fill([])
-  answered.value = Array(props.questions.length).fill(false)
+  attempts.value = props.questions.map(() => [])
+  answered.value = props.questions.map(() => false)
   answerSaved.value = false
   reset.value = true
   timeUsed.value = 0
-  handler.resume()
 }
 
-const { settings } = storeToRefs(useUserSettingsStore())
+const panel = ref<HTMLElement | null>(null)
+const { y } = useScroll(panel, { behavior: 'smooth' })
+const questionRef = useTemplateRef<ComponentPublicInstance[]>('questionRef' as never)
+const questionHeights = ref<number[]>([])
+
+const recalculateHeights = useDebounceFn(() => {
+  scrollTo.value = -1
+  questionHeights.value = questionRef.value?.map((component) => component.$el.clientHeight) ?? []
+}, 150)
+
+watch([questionRef, collapsed, () => props.questions.length], () => {
+  recalculateHeights()
+})
+
+watchEffect(() => {
+  if (scrollTo.value < 0) return
+  y.value = questionHeights.value.slice(0, scrollTo.value).reduce((acc, current) => acc + current, 0)
+})
 
 const timeUsed = ref(0)
-const handler = useIntervalFn(() => {
-  timeUsed.value++
+const timer = useIntervalFn(() => {
+  timeUsed.value += 1
 }, 1000)
 
-onMounted(() => {})
-
 onUnmounted(() => {
-  handler.pause()
+  timer.pause()
 })
 </script>
 

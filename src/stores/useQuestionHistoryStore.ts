@@ -1,4 +1,6 @@
 import axios from '@/axios'
+import { streamQuestionCreation } from '@/services/questionCreationStream'
+import { useUserSettingsStore, useUserStore } from '@/stores/user'
 import type {
   CreateQuestionRequest,
   History,
@@ -7,40 +9,17 @@ import type {
   QuestionsCreateStreamDonePayload,
   Response,
 } from '@/types'
-import { streamQuestionCreation } from '@/services/questionCreationStream'
-import { useUserSettingsStore, useUserStore } from '@/stores/user'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
-export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
+const modelCodeByName: Record<string, string> = {
+  ChatGPT: 'C',
+  Kimi: 'K',
+}
+
+export const useQuestionHistoryStore = defineStore('questionHistory', () => {
   const histories = ref<History[]>([])
-  const subjects = computed(() => Array.from(new Set(histories.value.map((h) => h.subject))))
-  const tags = computed(() => Array.from(new Set(histories.value.map((h) => h.tag))))
-
-  const { name, token } = storeToRefs(useUserStore())
-
   const isFetching = ref(false)
-
-  const fetch = () => {
-    isFetching.value = true
-    const error = ref<string | null>(null)
-
-    axios
-      .get<Response<History[]>>('/history', {
-        params: { username: name.value },
-      })
-      .then((response) => {
-        histories.value = response.data.data ?? []
-      })
-      .catch(() => {
-        error.value = 'Network error, please try again later.'
-      })
-      .finally(() => {
-        isFetching.value = false
-      })
-
-    return error
-  }
 
   const added = ref(false)
   const isStreaming = ref(false)
@@ -52,6 +31,12 @@ export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
     percent: 0,
   })
 
+  const subjects = computed(() => Array.from(new Set(histories.value.map((history) => history.subject))))
+  const tags = computed(() => Array.from(new Set(histories.value.map((history) => history.tag))))
+
+  const { name, token } = storeToRefs(useUserStore())
+  const { settings } = storeToRefs(useUserSettingsStore())
+
   const resetCreateState = () => {
     createError.value = null
     donePayload.value = null
@@ -62,12 +47,18 @@ export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
     }
   }
 
-  const { settings } = storeToRefs(useUserSettingsStore())
+  const upsertHistory = (history: History) => {
+    const existingIndex = histories.value.findIndex(
+      (currentHistory) => currentHistory.history_id === history.history_id,
+    )
 
-  const modelMap = new Map([
-    ['ChatGPT', 'C'],
-    ['Kimi', 'K'],
-  ])
+    if (existingIndex >= 0) {
+      histories.value[existingIndex] = history
+      return
+    }
+
+    histories.value.push(history)
+  }
 
   const buildCreateRequest = (
     subject: string,
@@ -80,12 +71,12 @@ export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
     tag,
     number,
     type,
-    model: modelMap.get(settings.value.questions.generate_model) ?? 'C',
+    model: modelCodeByName[settings.value.questions.generate_model] ?? 'C',
   })
 
   const applyCreateDonePayload = (payload: QuestionsCreateStreamDonePayload) => {
     donePayload.value = payload
-    histories.value.push(payload.history)
+    upsertHistory(payload.history)
     createProgress.value = {
       total: payload.number,
       current: payload.number,
@@ -102,15 +93,32 @@ export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
       throw new Error('No history returned from /questions/create')
     }
 
-    const history = data.history[0]
     applyCreateDonePayload({
-      history,
+      history: data.history[0],
       number: data.number,
       questions: data.questions,
       subject: data.subject,
       tag: data.tag,
       type: data.type,
     })
+  }
+
+  const fetch = async (): Promise<string | null> => {
+    isFetching.value = true
+
+    try {
+      const response = await axios.get<Response<History[]>>('/history', {
+        params: { username: name.value },
+      })
+      histories.value = response.data.data ?? []
+      return null
+    } catch (error) {
+      return error instanceof Error
+        ? error.message
+        : 'Network error, please try again later.'
+    } finally {
+      isFetching.value = false
+    }
   }
 
   const createWithStream = async (subject: string, tag: string, number: number, type: string) => {
@@ -140,10 +148,9 @@ export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
             percent: payload.percent,
           }
         },
-        onDone: (payload) => {
-          applyCreateDonePayload(payload)
-        },
+        onDone: applyCreateDonePayload,
       })
+      return
     } catch (streamError) {
       try {
         await createWithFallback(requestPayload)
@@ -161,18 +168,27 @@ export const useQuestionHistoryStore = defineStore('QuestionHistory', () => {
     }
   }
 
-  const del = (id: number) => {
-    axios
-      .delete<Response<undefined>>('/history', { data: { username: name.value, history_id: id } })
-      .then(() => {
-        histories.value = histories.value.filter((h) => h.history_id !== id)
+  const del = async (id: number): Promise<boolean> => {
+    try {
+      await axios.delete<Response<undefined>>('/history', {
+        data: {
+          username: name.value,
+          history_id: id,
+        },
       })
+
+      histories.value = histories.value.filter((history) => history.history_id !== id)
+      return true
+    } catch {
+      return false
+    }
   }
 
   return {
     histories,
     subjects,
     tags,
+    isFetching,
     added,
     isStreaming,
     createError,

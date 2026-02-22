@@ -58,6 +58,8 @@ const props = withDefaults(
   },
 )
 
+const normalizedPercentage = computed(() => Math.min(100, Math.max(0, props.percentage)))
+
 // 计算圆圈的半径
 const radius = computed(() => (props.size - props.strokeWidth) / 2)
 
@@ -66,11 +68,11 @@ const circumference = computed(() => 2 * Math.PI * radius.value)
 
 // 根据进度计算偏移量
 const offset = computed(() => {
-  return circumference.value - (props.percentage / 100) * circumference.value
+  return circumference.value - (normalizedPercentage.value / 100) * circumference.value
 })
 
 const colorClass = computed(() => {
-  if (props.percentage === 100) {
+  if (normalizedPercentage.value === 100) {
     return `${props.finishColor} dark:${props.darkFinishColor}`
   }
   return `${props.color} dark:${props.darkColor}`

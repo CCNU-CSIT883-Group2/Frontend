@@ -1,127 +1,134 @@
-
 <template>
-  <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center px-4" >
-    <div class="bg-surface-0 dark:bg-surface-900 p-8 shadow-lg rounded-lg w-full max-w-2xl flex flex-col items-center">
-      <!-- 顶部标题 -->
+  <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center px-4">
+    <div
+      class="bg-surface-0 dark:bg-surface-900 p-8 shadow-lg rounded-lg w-full max-w-2xl flex flex-col items-center"
+    >
       <div class="text-center mb-6 w-full">
-        <svg class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16" viewBox="0 0 30 32" fill="none"
-          xmlns="http://www.w3.org/2000/svg">
-          <!-- SVG 内容保持不变 -->
+        <svg
+          class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16"
+          viewBox="0 0 30 32"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            clip-rule="evenodd"
+            d="M20.7207 6.18211L14.9944 3.11148L3.46855 9.28678L0.579749 7.73444L14.9944 0L23.6242 4.62977L20.7207 6.18211ZM14.9996 12.3574L26.5182 6.1821L29.4216 7.73443L14.9996 15.4621L6.37724 10.8391L9.27337 9.28677L14.9996 12.3574ZM2.89613 16.572L0 15.0196V24.2656L14.4147 32V28.8953L2.89613 22.7132V16.572ZM11.5185 18.09L0 11.9147V8.81001L14.4147 16.5376V25.7904L11.5185 24.2312V18.09ZM24.2086 15.0194V11.9147L15.5788 16.5377V31.9998L18.475 30.4474V18.09L24.2086 15.0194ZM27.0969 22.7129V10.3623L30.0004 8.81V24.2653L21.3706 28.895V25.7904L27.0969 22.7129Z"
+          />
         </svg>
 
-        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-2">Register Now</div>
+        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-2">Register</div>
         <div class="flex justify-center">
           <span class="text-surface-600 dark:text-surface-200 font-medium">Already have an account?</span>
           <a class="font-medium ml-2 text-primary cursor-pointer" @click="goToLogin">Login here!</a>
         </div>
       </div>
 
-      <!-- 表单内容 -->
-      <div class="flex flex-col space-y-2 w-full max-w-lg">
-        <!-- 用户角色 -->
+      <form class="flex flex-col space-y-3 w-full max-w-lg" @submit.prevent="handleRegister">
         <div class="flex flex-col">
           <label for="user-role" class="text-surface-900 dark:text-surface-0 font-medium mb-2">User Role</label>
-          <Select v-model="selectedRole" :options="roles" optionLabel="name" placeholder="Select a Role" checkmark
-            :highlightOnSelect="false" class="w-full" />
+          <Select
+            id="user-role"
+            v-model="form.role"
+            :options="roles"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select a Role"
+            class="w-full"
+          />
         </div>
 
-        <!-- 用户名 -->
         <div class="flex flex-col">
           <label for="username" class="text-surface-900 dark:text-surface-0 font-medium mb-2">Username</label>
           <FloatLabel variant="in">
-            <InputText id="username" v-model="username" variant="filled" class="w-full h-12" />
+            <InputText id="username" v-model="form.name" variant="filled" class="w-full h-12" />
             <label for="username">Username</label>
           </FloatLabel>
         </div>
 
-        <!-- 邮箱 -->
         <div class="flex flex-col">
           <label for="email" class="text-surface-900 dark:text-surface-0 font-medium mb-2">Email</label>
           <FloatLabel variant="in">
-            <InputText id="email" v-model="email" variant="filled" class="w-full h-12" />
+            <InputText id="email" v-model="form.email" variant="filled" class="w-full h-12" />
             <label for="email">Email</label>
           </FloatLabel>
         </div>
 
-        <!-- 密码 -->
         <div class="flex flex-col">
           <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2">Password</label>
           <FloatLabel variant="in">
             <InputText
               id="password"
-              v-model="password"
+              v-model="form.password"
               type="password"
               variant="filled"
               class="w-full h-12"
-              @input="checkPasswordStrength"
-
             />
             <label for="password">Password</label>
           </FloatLabel>
-          <div v-if="password.length > 0" class="mt-2">
-            <div class="text-sm mb-2">Password Strength</div>
+          <div v-if="form.password" class="mt-2">
+            <div class="text-sm mb-1">Password Strength: {{ passwordStrength.label }}</div>
             <div class="h-2 rounded-full w-full bg-gray-200">
               <div
-                :class="passwordStrengthStyle.backgroundColor"
-                :style="{ width: passwordStrengthStyle.width }"
-                class="h-full rounded-full"
+                class="h-full rounded-full transition-all"
+                :class="passwordStrength.color"
+                :style="{ width: passwordStrength.width }"
               ></div>
             </div>
           </div>
         </div>
 
-        <!-- 确认密码 -->
         <div class="flex flex-col">
-          <label for="confirm-password" class="text-surface-900 dark:text-surface-0 font-medium mb-2">Confirm Password</label>
+          <label for="confirm-password" class="text-surface-900 dark:text-surface-0 font-medium mb-2">
+            Confirm Password
+          </label>
           <FloatLabel variant="in">
             <InputText
               id="confirm-password"
-              v-model="confirmPassword"
+              v-model="form.confirmPassword"
               type="password"
               variant="filled"
               class="w-full h-12"
-              @blur="validateConfirmPassword"
             />
             <label for="confirm-password">Confirm Password</label>
           </FloatLabel>
-          <div v-if="confirmPassword.length > 0" class="mt-1">
-            <span
-              v-if="!passwordMismatch"
-              class="text-green-600 text-sm"
-            >
-              ✔️ Passwords match
-            </span>
-            <span v-else class="text-red-600 text-sm">Passwords do not match</span>
+          <div v-if="form.confirmPassword" class="mt-1 text-sm">
+            <span v-if="!passwordMismatch" class="text-green-600">Passwords match</span>
+            <span v-else class="text-red-600">Passwords do not match</span>
           </div>
         </div>
 
-        <!-- 条款和条件 -->
         <div class="flex justify-between items-center">
           <div class="flex items-center">
             <Checkbox id="terms" v-model="termsAccepted" class="mr-2" :binary="true" />
-            <label for="terms" class="text-surface-900 dark:text-surface-0">I accept the terms and conditions</label>
+            <label for="terms" class="text-surface-900 dark:text-surface-0">
+              I accept the terms and conditions
+            </label>
           </div>
-          <a class="font-medium text-primary cursor-pointer" @click="showTerms">Read Terms</a>
+          <a class="font-medium text-primary cursor-pointer" @click="termsDialogVisible = true">Read Terms</a>
         </div>
-      </div>
 
-      <!-- 注册按钮 -->
-      <div class="mt-6 w-full max-w-lg">
-          <Button
-            label="Register"
-            icon="pi pi-user-plus"
-            class="w-full"
-            :disabled="!termsAccepted || passwordMismatch"
-            @click="handleRegister"
-            />
-      </div>
-      <div v-if="errorMessage" class="text-red-600 mt-4">{{ errorMessage }}</div>
-      <div v-if="successMessage" class="text-green-600 mt-4">{{ successMessage }}</div>
+        <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
+        <Message v-if="successMessage" severity="success" :closable="false">{{ successMessage }}</Message>
+
+        <Button
+          label="Register"
+          icon="pi pi-user-plus"
+          class="w-full"
+          type="submit"
+          :loading="isSubmitting"
+          :disabled="isSubmitting || !canSubmit"
+        />
+      </form>
     </div>
 
-    <!-- 条款弹窗 -->
-    <Dialog v-model:visible="termsDialogVisible" :style="{ width: '50vw' }" header="Terms and Conditions" :modal="true">
-      <div v-html="termsContent"></div>
+    <Dialog
+      v-model:visible="termsDialogVisible"
+      :style="{ width: '50vw' }"
+      header="Terms and Conditions"
+      :modal="true"
+    >
+      <p>Please follow the platform terms and conditions.</p>
       <template #footer>
         <Button label="Cancel" icon="pi pi-times" @click="termsDialogVisible = false" />
         <Button label="Agree" icon="pi pi-check" @click="agreeTerms" />
@@ -130,128 +137,117 @@
   </div>
 </template>
 
-
-
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import axios from '@/axios'; // 导入 Axios
-import { useRouter } from 'vue-router';
+import axios from '@/axios'
+import type { RegisterResponse } from '@/types'
+import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
+import Dialog from 'primevue/dialog'
+import FloatLabel from 'primevue/floatlabel'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
+import Select from 'primevue/select'
+import { computed, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-interface RoleOption {
+type UserRole = 'teacher' | 'student'
+
+interface RegisterForm {
+  role: UserRole
   name: string
-  value: string
+  email: string
+  password: string
+  confirmPassword: string
 }
 
-const roles = ref([
-  { name: 'Teacher', value: 'teacher' },
-  { name: 'Student', value: 'student' },
-]);
+const roles: Array<{ label: string; value: UserRole }> = [
+  { label: 'Teacher', value: 'teacher' },
+  { label: 'Student', value: 'student' },
+]
 
-const selectedRole = ref<RoleOption | null>(null); // 用户选择的角色
-const username = ref(''); // 用户名
-const email = ref(''); // 邮箱
-const password = ref(''); // 密码
-const confirmPassword = ref(''); // 确认密码
-const termsAccepted = ref(false); // 是否接受条款
-const termsDialogVisible = ref(false); // 条款弹窗可见性
-const errorMessage = ref<string>(''); // 错误信息
-const successMessage = ref<string>(''); // 成功信息
-const router = useRouter();
-const termsContent = ref('Please follow the platform terms and conditions.');
+const form = reactive<RegisterForm>({
+  role: 'student',
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+})
 
-const passwordMismatch = computed(() => password.value !== confirmPassword.value);
+const termsAccepted = ref(false)
+const termsDialogVisible = ref(false)
+const isSubmitting = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 
-const showTerms = () => {
-  termsDialogVisible.value = true;
-};
+const router = useRouter()
+
+const passwordMismatch = computed(() => form.password !== form.confirmPassword)
+
+const passwordStrength = computed(() => {
+  let score = 0
+  if (form.password.length >= 8) score += 1
+  if (/[0-9]/.test(form.password)) score += 1
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) score += 1
+  if (/[a-z]/.test(form.password) && /[A-Z]/.test(form.password)) score += 1
+
+  if (score <= 1) return { width: '25%', color: 'bg-red-500', label: 'Weak' }
+  if (score === 2) return { width: '50%', color: 'bg-orange-500', label: 'Fair' }
+  if (score === 3) return { width: '75%', color: 'bg-blue-500', label: 'Good' }
+  return { width: '100%', color: 'bg-green-500', label: 'Strong' }
+})
+
+const canSubmit = computed(() => {
+  return (
+    form.name.trim().length > 0 &&
+    form.email.trim().length > 0 &&
+    form.password.length > 0 &&
+    form.confirmPassword.length > 0 &&
+    !passwordMismatch.value &&
+    termsAccepted.value
+  )
+})
 
 const agreeTerms = () => {
-  termsAccepted.value = true;
-  termsDialogVisible.value = false;
-};
+  termsAccepted.value = true
+  termsDialogVisible.value = false
+}
 
 const goToLogin = () => {
-  router.push('/login');
-};
+  void router.push({ name: 'login' })
+}
 
-// 计算密码强度
-const passwordStrength = computed(() => {
-  const lengthCriteria = password.value.length >= 8;
-  const numberCriteria = /[0-9]/.test(password.value);
-  const specialCharCriteria = /[!@#$%^&*(),.?":{}|<>]/.test(password.value);
-  const lowerUpperCaseCriteria = /[a-z]/.test(password.value) && /[A-Z]/.test(password.value);
-
-  let strength = 0;
-  if (lengthCriteria) strength++;
-  if (numberCriteria) strength++;
-  if (specialCharCriteria) strength++;
-  if (lowerUpperCaseCriteria) strength++;
-
-  return strength;
-});
-
-// 计算密码强度样式
-const passwordStrengthStyle = computed(() => {
-  const strength = passwordStrength.value;
-  let width = '33%';
-  let backgroundColor = 'bg-red-500';
-
-  if (strength === 2) {
-    width = '66%';
-    backgroundColor = 'bg-blue-500';
-  } else if (strength >= 3) {
-    width = '100%';
-    backgroundColor = 'bg-green-500';
+const handleRegister = async () => {
+  if (!canSubmit.value) {
+    errorMessage.value = 'Please complete all required fields and accept the terms'
+    successMessage.value = ''
+    return
   }
 
-  return { width, backgroundColor };
-});
-
-const validateConfirmPassword = () => {
-  if (passwordMismatch.value) {
-    console.error('Passwords do not match.');
-  }
-};
-
-const checkPasswordStrength = () => {
-  // keep for template binding
-};
-
-// 注册处理函数
-const handleRegister = async (): Promise<void> => {
-  if (!username.value || !email.value || !password.value || !selectedRole.value) {
-    errorMessage.value = 'Please fill in all fields';
-    return;
-  }
-
-  if (passwordMismatch.value) {
-    errorMessage.value = 'Passwords do not match';
-    return;
-  }
+  isSubmitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
 
   try {
-    const response = await axios.post('/register', {
-      name: username.value,
-      password: password.value,
-      email: email.value,
-      role: selectedRole.value?.value,
-    });
+    const response = await axios.post<RegisterResponse>('/register', {
+      name: form.name.trim(),
+      password: form.password,
+      email: form.email.trim(),
+      role: form.role,
+    })
 
-    if (response.data.code === 200) {
-      // 注册成功，显示成功信息
-      successMessage.value = response.data.info;
-      errorMessage.value = '';
-      alert('Registration successful!');
-      // 跳转到登录页面
-      goToLogin();
-    } else {
-      // 注册失败，显示错误信息
-      errorMessage.value = response.data.info || 'Registration failed';
+    if (response.data.code !== 200 || !response.data.user) {
+      throw new Error(response.data.info || 'Registration failed')
     }
-  } catch {
-    // 处理网络错误或服务器错误
-    errorMessage.value = 'Unable to connect to the server, please try again later';
-    successMessage.value = '';
+
+    successMessage.value = response.data.info || 'Registration successful'
+    setTimeout(() => {
+      void router.push({ name: 'login' })
+    }, 600)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Registration failed'
+    successMessage.value = ''
+  } finally {
+    isSubmitting.value = false
   }
-};
+}
 </script>

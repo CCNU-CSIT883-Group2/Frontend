@@ -1,4 +1,3 @@
-// src/axiosInterceptor.js
 import axios from 'axios'
 import { useUserStore } from '@/stores/user'
 
@@ -6,12 +5,14 @@ const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_SERVER_BASE_URL as string,
 })
 
-// 添加请求拦截器
+const PUBLIC_ENDPOINTS = new Set(['/login', '/register'])
+
 axiosInstance.interceptors.request.use(
   (config) => {
-    if (config.url === '/login' || config.url === '/register') {
+    if (config.url && PUBLIC_ENDPOINTS.has(config.url)) {
       return config
     }
+
     const userStore = useUserStore()
     const token = userStore.token || localStorage.getItem('token')
 
