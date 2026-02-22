@@ -60,12 +60,13 @@ const createProfileFromSeed = (seedValue: string) => {
   const seed = hashSeed(seedValue)
 
   const attempts = Array.from({ length: 7 }, (_, index) => 8 + ((seed + index * 9) % 14))
-  const accuracy = Array.from({ length: 7 }, (_, index) => 0.58 + (((seed + index * 11) % 30) / 100))
+  const accuracy = Array.from({ length: 7 }, (_, index) => 0.58 + ((seed + index * 11) % 30) / 100)
 
   return { attempts, accuracy }
 }
 
-const getSubjectProfile = (subject: string) => PROFILE_BY_SUBJECT[subject] ?? createProfileFromSeed(subject)
+const getSubjectProfile = (subject: string) =>
+  PROFILE_BY_SUBJECT[subject] ?? createProfileFromSeed(subject)
 
 const buildDailyOverview = (subject: string): OverviewDailyData[] => {
   const profile = getSubjectProfile(subject)
@@ -119,8 +120,13 @@ const calculateStreakDays = (dailyOverview: OverviewDailyData[]) => {
   return streak
 }
 
-const buildInsights = (subject: string, dailyOverview: OverviewDailyData[]): OverviewInsightData[] => {
-  const peakDay = [...dailyOverview].sort((left, right) => right.total_attempts - left.total_attempts)[0]
+const buildInsights = (
+  subject: string,
+  dailyOverview: OverviewDailyData[],
+): OverviewInsightData[] => {
+  const peakDay = [...dailyOverview].sort(
+    (left, right) => right.total_attempts - left.total_attempts,
+  )[0]
   const weakestDay = [...dailyOverview]
     .filter((item) => item.total_attempts > 0)
     .sort((left, right) => left.accuracy_rate - right.accuracy_rate)[0]
@@ -152,7 +158,8 @@ export function buildOverviewDashboardMockData(
   subjectOptions: string[],
 ): OverviewDashboardData {
   const subjects = subjectOptions.length > 0 ? subjectOptions : [...DEFAULT_SUBJECTS]
-  const focusSubject = selectedSubject && subjects.includes(selectedSubject) ? selectedSubject : subjects[0]
+  const focusSubject =
+    selectedSubject && subjects.includes(selectedSubject) ? selectedSubject : subjects[0]
 
   const dailyOverview = buildDailyOverview(focusSubject)
   const subjectOverview = buildSubjectOverview(subjects)

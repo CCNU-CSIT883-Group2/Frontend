@@ -1,7 +1,9 @@
 <template>
   <section class="flex w-full flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
     <div>
-      <p class="text-xs font-medium uppercase tracking-wider text-surface-500 dark:text-surface-300">
+      <p
+        class="text-xs font-medium uppercase tracking-wider text-surface-500 dark:text-surface-300"
+      >
         Learning Dashboard
       </p>
       <h1 class="mt-1 text-2xl font-semibold text-surface-900 dark:text-surface-0">Overview</h1>

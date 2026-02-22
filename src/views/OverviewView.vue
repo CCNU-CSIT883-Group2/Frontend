@@ -26,6 +26,9 @@
       <Message v-else-if="errorMessage" severity="error" :closable="false">
         {{ errorMessage }}
       </Message>
+      <Message v-else-if="infoMessage" severity="info" :closable="false">
+        {{ infoMessage }}
+      </Message>
 
       <div v-if="isLoading" class="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <Skeleton height="7rem" />
@@ -69,6 +72,7 @@ const {
   hasSubjectOptions,
   isLoading,
   errorMessage,
+  infoMessage,
   dateRangeLabel,
   latestUpdatedLabel,
   kpiCards,

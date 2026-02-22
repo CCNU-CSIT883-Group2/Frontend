@@ -71,11 +71,13 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     )
 
     if (existingIndex >= 0) {
-      histories.value[existingIndex] = history
+      const nextHistories = [...histories.value]
+      nextHistories[existingIndex] = history
+      histories.value = nextHistories
       return
     }
 
-    histories.value.push(history)
+    histories.value = [...histories.value, history]
   }
 
   const buildCreateRequest = (
@@ -174,6 +176,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
       try {
         await createWithFallback(requestPayload)
       } catch (fallbackError) {
+        createProgress.value = { ...DEFAULT_PROGRESS }
         createError.value =
           fallbackError instanceof Error
             ? fallbackError.message
@@ -203,6 +206,19 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     }
   }
 
+  const updateHistoryProgress = (historyId: number, progress: number) => {
+    const existingIndex = histories.value.findIndex((history) => history.history_id === historyId)
+    if (existingIndex < 0) return
+
+    const normalizedProgress = Math.min(1, Math.max(0, progress))
+    const nextHistories = [...histories.value]
+    nextHistories[existingIndex] = {
+      ...nextHistories[existingIndex],
+      progress: normalizedProgress,
+    }
+    histories.value = nextHistories
+  }
+
   return {
     histories,
     subjects,
@@ -218,5 +234,6 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     fetchHistories,
     createQuestions,
     deleteHistory,
+    updateHistoryProgress,
   }
 })

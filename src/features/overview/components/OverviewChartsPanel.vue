@@ -9,7 +9,12 @@
           How your selected subject evolves across this week
         </p>
       </header>
-      <Chart type="line" :data="accuracyTrendChartData" :options="accuracyTrendChartOptions" class="h-80" />
+      <Chart
+        type="line"
+        :data="accuracyTrendChartData"
+        :options="accuracyTrendChartOptions"
+        class="h-80"
+      />
     </article>
 
     <div class="h-full">
@@ -27,12 +32,19 @@
       class="border-color rounded-2xl bg-surface-0 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-surface-900"
     >
       <header class="mb-3">
-        <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">Correct vs Incorrect</h3>
+        <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">
+          Correct vs Incorrect
+        </h3>
         <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">
           Daily attempt quality with stacked comparison
         </p>
       </header>
-      <Chart type="bar" :data="attemptsStackedChartData" :options="attemptsStackedChartOptions" class="h-72" />
+      <Chart
+        type="bar"
+        :data="attemptsStackedChartData"
+        :options="attemptsStackedChartOptions"
+        class="h-72"
+      />
     </article>
 
     <article
@@ -46,17 +58,29 @@
           Compare current week accuracy across subjects
         </p>
       </header>
-      <Chart type="bar" :data="subjectAccuracyChartData" :options="subjectAccuracyChartOptions" class="h-72" />
+      <Chart
+        type="bar"
+        :data="subjectAccuracyChartData"
+        :options="subjectAccuracyChartOptions"
+        class="h-72"
+      />
     </article>
 
     <article
       class="border-color rounded-2xl bg-surface-0 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-surface-900"
     >
       <header class="mb-3">
-        <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">Attempt Distribution</h3>
+        <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">
+          Attempt Distribution
+        </h3>
         <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">Workload split by subject</p>
       </header>
-      <Chart type="doughnut" :data="distributionChartData" :options="distributionChartOptions" class="h-72" />
+      <Chart
+        type="doughnut"
+        :data="distributionChartData"
+        :options="distributionChartOptions"
+        class="h-72"
+      />
     </article>
   </div>
 </template>

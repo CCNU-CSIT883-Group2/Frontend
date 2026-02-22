@@ -1,36 +1,21 @@
 <template>
-  <div class="flex flex-col">
-    <div class="flex justify-between mb-2 gap-2 items-center">
-      <div class="flex gap-2">
+  <div class="flex min-h-0 flex-col">
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex w-full items-center gap-2 sm:w-auto">
         <span v-show="settings.questions.showTime" class="font-bold">Time Used:</span>
         <span v-show="settings.questions.showTime" class="font-mono">{{ elapsedTime }}</span>
       </div>
 
-      <div class="flex gap-4">
-        <Button
-          :disabled="disableSubmit"
-          label="Submit"
-          severity="primary"
-          size="small"
-          @click="submitAnswers"
-        />
+      <div class="flex w-full justify-end gap-2 sm:w-auto sm:gap-4">
+        <Button :disabled="disableSubmit" label="Submit" severity="primary" size="small" @click="submitAnswers" />
         <Button icon="pi pi-refresh" severity="secondary" size="small" @click="resetState" />
       </div>
     </div>
 
-    <div ref="panel" class="overflow-y-auto flex-1 no-scrollbar">
-      <QuestionListItem
-        v-for="(question, index) in questions"
-        :key="question.question_id"
-        ref="questionRef"
-        v-model:attempt="attempts[index]"
-        v-model:is-collapsed="collapsedStates[index]"
-        v-model:reset-token="resetToken"
-        :is-answered="answeredStates[index]"
-        :no="index + 1"
-        :question="question"
-        class="my-2 mx-3"
-      />
+    <div class="overflow-y-auto flex-1 no-scrollbar">
+      <QuestionListItem v-for="(question, index) in questions" :key="question.question_id" ref="questionRef"
+        v-model:attempt="attempts[index]" v-model:is-collapsed="collapsedStates[index]" v-model:reset-token="resetToken"
+        :is-answered="answeredStates[index]" :no="index + 1" :question="question" class="my-2 mx-3" />
     </div>
   </div>
 </template>
@@ -41,13 +26,14 @@ import { useSubmit } from '@/features/questions/composables/useSubmit'
 import { useQuestionHistoryStore } from '@/stores/questionHistoryStore'
 import { useUserSettingsStore } from '@/stores/userStore'
 import type { Question } from '@/types'
-import { useDebounceFn, useIntervalFn, useScroll } from '@vueuse/core'
+import { useIntervalFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
+import { useToast } from 'primevue'
 import {
   computed,
+  nextTick,
   onUnmounted,
   ref,
-  shallowRef,
   type ComponentPublicInstance,
   useTemplateRef,
   watch,
@@ -68,8 +54,9 @@ const scrollToQuestionIndex = defineModel<number>('scrollTo', { default: -1 })
 const attempts = defineModel<number[][]>('attempts', { default: () => [] as number[][] })
 
 const resetToken = ref(0)
-const collapsedStates = shallowRef<boolean[]>([])
-const answeredStates = shallowRef<boolean[]>([])
+const collapsedStates = ref<boolean[]>([])
+const answeredStates = ref<boolean[]>([])
+const questionRef = useTemplateRef<ComponentPublicInstance[]>('questionRef')
 
 const syncStateWithQuestions = () => {
   const questionCount = questions.value.length
@@ -80,30 +67,13 @@ const syncStateWithQuestions = () => {
   )
 
   attempts.value = Array.from({ length: questionCount }, (_, index) => attempts.value[index] ?? [])
-
-  answeredStates.value = Array.from({ length: questionCount }, (_, index) => {
-    if (isAnswerSaved.value) return true
-    return (attempts.value[index] ?? []).length > 0
-  })
+  answeredStates.value = Array.from({ length: questionCount }, () => isAnswerSaved.value)
 }
 
 watch(
   () => questions.value,
-  () => {
-    syncStateWithQuestions()
-  },
+  syncStateWithQuestions,
   { immediate: true },
-)
-
-watch(
-  [() => questions.value.length, attempts],
-  () => {
-    if (isAnswerSaved.value) return
-    answeredStates.value = questions.value.map(
-      (_, index) => (attempts.value[index] ?? []).length > 0,
-    )
-  },
-  { deep: true },
 )
 
 watch(
@@ -123,6 +93,7 @@ watch(
 
 const { settings } = storeToRefs(useUserSettingsStore())
 const historyStore = useQuestionHistoryStore()
+const toast = useToast()
 const { submit, isSubmitting } = useSubmit()
 
 const disableSubmit = computed(() => {
@@ -139,17 +110,35 @@ const submitAnswers = async () => {
   if (!firstQuestion) return
 
   const questionIds = questions.value.map((question) => question.question_id)
-  const submittedMap = await submit({
+  const submitResult = await submit({
     historyId: firstQuestion.history_id,
     type: firstQuestion.type,
     questionIds,
     answers: attempts.value,
   })
 
-  answeredStates.value = questionIds.map((questionId) => submittedMap.get(questionId) === true)
+  answeredStates.value = questionIds.map(
+    (questionId) => submitResult.answeredMap.get(questionId) === true,
+  )
   isAnswerSaved.value = answeredStates.value.every(Boolean)
 
+  if (submitResult.failureCount > 0) {
+    const hasAnySuccess = submitResult.successCount > 0
+    const summary = hasAnySuccess ? 'Partial submission' : 'Submit failed'
+    const detail = hasAnySuccess
+      ? `${submitResult.successCount}/${questionIds.length} answers were saved. ${submitResult.firstError ?? ''}`.trim()
+      : (submitResult.firstError ?? 'Unable to submit answers. Please try again.')
+
+    toast.add({
+      severity: hasAnySuccess ? 'warn' : 'error',
+      summary,
+      detail,
+      life: 3500,
+    })
+  }
+
   if (isAnswerSaved.value) {
+    historyStore.updateHistoryProgress(firstQuestion.history_id, 1)
     void historyStore.fetchHistories()
   }
 }
@@ -162,25 +151,24 @@ const resetState = () => {
   timeUsed.value = 0
 }
 
-const panel = ref<HTMLElement | null>(null)
-const { y } = useScroll(panel, { behavior: 'smooth' })
-const questionRef = useTemplateRef<ComponentPublicInstance[]>('questionRef')
-const questionHeights = shallowRef<number[]>([])
+const scrollToQuestion = async (index: number) => {
+  if (index < 0 || index >= questions.value.length) return
 
-const recalculateHeights = useDebounceFn(() => {
-  // Measured heights let the navigator jump to exact question offsets.
-  questionHeights.value =
-    questionRef.value?.map((component) => (component.$el as HTMLElement).clientHeight) ?? []
-}, 120)
+  collapsedStates.value = collapsedStates.value.map(
+    (collapsed, currentIndex) => (currentIndex === index ? false : collapsed),
+  )
+  await nextTick()
 
-watch([questionRef, collapsedStates, () => questions.value.length], () => {
-  recalculateHeights()
-})
+  const target = questionRef.value?.[index]
+  const targetElement = target?.$el as HTMLElement | undefined
+  targetElement?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 watch(scrollToQuestionIndex, (index) => {
   if (index < 0) return
 
-  y.value = questionHeights.value.slice(0, index).reduce((sum, height) => sum + height, 0)
+  void scrollToQuestion(index)
+  scrollToQuestionIndex.value = -1
 })
 
 const timeUsed = ref(0)

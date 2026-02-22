@@ -1,44 +1,75 @@
 <template>
   <Fieldset v-model:collapsed="isCollapsed" toggleable>
     <template #legend>
-      <div class="flex items-center px-2">
-        <span class="font-bold py-1">Question {{ no }}</span>
-        <div v-if="settings.questions.showDifficulty" class="font-bold ml-2 flex">
+      <button
+        type="button"
+        class="w-full flex items-center px-2 py-1 cursor-pointer"
+        @click.stop="toggleCardCollapsed"
+      >
+        <i :class="isCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'" class="text-xs mr-2" />
+        <span class="font-bold">Question {{ no }}</span>
+        <div v-if="settings.questions.showDifficulty" class="font-bold ml-2 flex items-center">
           <span class="mr-2">-</span>
           <Rating :default-value="question.difficulty" readonly />
         </div>
-      </div>
+      </button>
     </template>
 
-    <p class="mx-2.5 mb-2.5">{{ question.content }}</p>
-
-    <div class="flex">
-      <SelectButton
-        v-model="selectedOption"
-        :disabled="isAnswered"
-        :multiple="question.type === 'multi'"
-        :options="optionItems"
-        class="flex-1 flex flex-col"
-        option-label="label"
-        option-value="index"
+    <div class="flex flex-col gap-2">
+      <button
+        type="button"
+        class="mx-2.5 mt-1 flex items-center justify-between text-left font-semibold text-surface-700 dark:text-surface-200"
+        @click="isQuestionSectionCollapsed = !isQuestionSectionCollapsed"
       >
-        <template #option="slot">
-          <div
-            class="px"
-            :class="{
-              'text-green-600 font-extrabold': isCorrectOption(slot.option.index),
-              'text-red-600 font-extrabold': isWrongOption(slot.option.index),
-            }"
-          >
-            <span>{{ slot.option.label }}</span>
-          </div>
-        </template>
-      </SelectButton>
-    </div>
+        <span>Question</span>
+        <i
+          :class="isQuestionSectionCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"
+          class="text-xs"
+        />
+      </button>
 
-    <div v-if="isAnswered" class="mx-2.5 mt-2">
-      <span class="font-bold">Explanation:</span>
-      <div>{{ question.explanation }}</div>
+      <div v-show="!isQuestionSectionCollapsed">
+        <p class="mx-2.5 mb-2.5">{{ question.content }}</p>
+
+        <div class="flex">
+          <SelectButton
+            v-model="selectedOption"
+            :disabled="isAnswered"
+            :multiple="question.type === 'multi'"
+            :options="optionItems"
+            class="flex-1 flex flex-col"
+            option-label="label"
+            option-value="index"
+          >
+            <template #option="slot">
+              <div
+                class="px"
+                :class="{
+                  'text-green-600 font-extrabold': isCorrectOption(slot.option.index),
+                  'text-red-600 font-extrabold': isWrongOption(slot.option.index),
+                }"
+              >
+                <span>{{ slot.option.label }}</span>
+              </div>
+            </template>
+          </SelectButton>
+        </div>
+      </div>
+
+      <div v-if="isAnswered" class="flex flex-col gap-2">
+        <button
+          type="button"
+          class="mx-2.5 mt-1 flex items-center justify-between text-left font-semibold text-surface-700 dark:text-surface-200"
+          @click="isExplanationCollapsed = !isExplanationCollapsed"
+        >
+          <span>Explanation</span>
+          <i :class="isExplanationCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'" class="text-xs" />
+        </button>
+
+        <div v-show="!isExplanationCollapsed" class="mx-2.5">
+          {{ question.explanation }}
+        </div>
+      </div>
     </div>
   </Fieldset>
 </template>
@@ -47,7 +78,7 @@
 import { useUserSettingsStore } from '@/stores/userStore'
 import type { Question } from '@/types'
 import { storeToRefs } from 'pinia'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 interface OptionItem {
   label: string
@@ -65,13 +96,11 @@ const props = withDefaults(
   },
 )
 
-const resetToken = defineModel<number>('resetToken', { default: 0 })
-watch(resetToken, () => {
-  selectedOption.value = null
-})
-
 const isCollapsed = defineModel<boolean>('isCollapsed', { default: false })
 const selectedAttemptIndices = defineModel<number[]>('attempt', { default: [] })
+const resetToken = defineModel<number>('resetToken', { default: 0 })
+const isQuestionSectionCollapsed = ref(false)
+const isExplanationCollapsed = ref(false)
 
 const optionItems = computed<OptionItem[]>(() =>
   props.question.options.map((label, index) => ({
@@ -111,6 +140,25 @@ const selectedOption = computed<number | number[] | null>({
     selectedAttemptIndices.value = typeof value === 'number' ? [value] : []
   },
 })
+
+watch(resetToken, () => {
+  selectedOption.value = null
+  isQuestionSectionCollapsed.value = false
+  isExplanationCollapsed.value = false
+})
+
+watch(
+  () => props.isAnswered,
+  (answered) => {
+    if (!answered) {
+      isExplanationCollapsed.value = false
+    }
+  },
+)
+
+const toggleCardCollapsed = () => {
+  isCollapsed.value = !isCollapsed.value
+}
 
 const isCorrectOption = (index: number) => {
   return (

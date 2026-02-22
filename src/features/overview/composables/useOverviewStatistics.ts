@@ -9,8 +9,22 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-const CHART_SERIES_COLORS = ['#60A5FA', '#22D3EE', '#34D399', '#FBBF24', '#FB923C', '#A78BFA'] as const
-const CHART_SERIES_HOVER_COLORS = ['#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#F97316', '#8B5CF6'] as const
+const CHART_SERIES_COLORS = [
+  '#60A5FA',
+  '#22D3EE',
+  '#34D399',
+  '#FBBF24',
+  '#FB923C',
+  '#A78BFA',
+] as const
+const CHART_SERIES_HOVER_COLORS = [
+  '#3B82F6',
+  '#06B6D4',
+  '#10B981',
+  '#F59E0B',
+  '#F97316',
+  '#8B5CF6',
+] as const
 const TREND_LINE_COLOR = '#3B82F6'
 const TREND_FILL_COLOR = 'rgba(59, 130, 246, 0.16)'
 const CORRECT_BAR_COLOR = '#10B981'
@@ -48,6 +62,7 @@ interface UseOverviewStatisticsResult {
   hasSubjectOptions: ComputedRef<boolean>
   isLoading: Ref<boolean>
   errorMessage: Ref<string>
+  infoMessage: Ref<string>
   dateRangeLabel: ComputedRef<string>
   latestUpdatedLabel: ComputedRef<string>
   kpiCards: Ref<OverviewKpiCard[]>
@@ -211,6 +226,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const selectedSubject = ref('')
   const isLoading = ref(false)
   const errorMessage = ref('')
+  const infoMessage = ref('')
   const latestRequestId = ref(0)
 
   const selectedStatistics = shallowRef<StatisticsData | null>(null)
@@ -360,7 +376,9 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
         },
         {
           label: 'Incorrect',
-          data: dailyStatistics.map((entry) => Math.max(entry.total_attempts - entry.correct_attempts, 0)),
+          data: dailyStatistics.map((entry) =>
+            Math.max(entry.total_attempts - entry.correct_attempts, 0),
+          ),
           backgroundColor: INCORRECT_BAR_COLOR,
           borderRadius: 8,
         },
@@ -501,7 +519,10 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     }
   }
 
-  const updateKpiCards = (selectedSubjectValue: string, subjectPerformances: SubjectPerformance[]) => {
+  const updateKpiCards = (
+    selectedSubjectValue: string,
+    subjectPerformances: SubjectPerformance[],
+  ) => {
     const selectedPerformance = subjectPerformances.find(
       (performance) => performance.subject === selectedSubjectValue,
     )
@@ -517,7 +538,8 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     const rankedSubjects = [...subjectPerformances]
       .filter((entry) => entry.totalAttempts > 0)
       .sort((left, right) => right.accuracyRate - left.accuracyRate)
-    const selectedRank = rankedSubjects.findIndex((entry) => entry.subject === selectedSubjectValue) + 1
+    const selectedRank =
+      rankedSubjects.findIndex((entry) => entry.subject === selectedSubjectValue) + 1
 
     kpiCards.value = [
       {
@@ -528,7 +550,8 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
           ? `${selectedPerformance.correctAttempts}/${selectedPerformance.totalAttempts} correct`
           : 'No attempts this week',
         icon: 'pi pi-chart-line',
-        tone: selectedPerformance && selectedPerformance.accuracyRate >= 70 ? 'positive' : 'warning',
+        tone:
+          selectedPerformance && selectedPerformance.accuracyRate >= 70 ? 'positive' : 'warning',
       },
       {
         id: 'attempts',
@@ -569,7 +592,10 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     )
   }
 
-  const updateInsights = (selectedSubjectValue: string, subjectPerformances: SubjectPerformance[]) => {
+  const updateInsights = (
+    selectedSubjectValue: string,
+    subjectPerformances: SubjectPerformance[],
+  ) => {
     if (!selectedStatistics.value) {
       insights.value = []
       return
@@ -708,6 +734,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     const requestId = ++latestRequestId.value
     isLoading.value = true
     errorMessage.value = ''
+    infoMessage.value = ''
 
     try {
       let selectedStatisticsData: StatisticsData
@@ -728,7 +755,10 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
         }
       } catch {
         if (import.meta.env.DEV) {
-          const mockOverviewData = buildOverviewDashboardMockData(selectedSubject.value, subjects.value)
+          const mockOverviewData = buildOverviewDashboardMockData(
+            selectedSubject.value,
+            subjects.value,
+          )
           selectedStatisticsData = buildStatisticsDataFromOverview(mockOverviewData)
           subjectPerformances = buildSubjectPerformanceFromOverview(
             subjects.value,
@@ -736,9 +766,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
           )
           applyOverviewInsights(mockOverviewData.insights)
           shouldBuildClientInsights = false
-          console.warn(
-            '[overview] /dashboard/overview unavailable, switched to local mock data.',
-          )
+          console.warn('[overview] /dashboard/overview unavailable, switched to local mock data.')
         } else {
           const legacyBundle = await fetchLegacyStatisticsBundle(selectedSubject.value)
           selectedStatisticsData = legacyBundle.selectedStatisticsData
@@ -778,6 +806,8 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     if (!selectedSubject.value) return
 
     const shareText = `Check out my stats for ${selectedSubject.value}!`
+    errorMessage.value = ''
+    infoMessage.value = ''
 
     if (navigator.share) {
       try {
@@ -794,7 +824,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
 
     try {
       await navigator.clipboard.writeText(window.location.href)
-      errorMessage.value = 'Sharing is not supported. URL copied to clipboard.'
+      infoMessage.value = 'Sharing is not supported. URL copied to clipboard.'
     } catch {
       errorMessage.value = 'Sharing is not supported in this browser.'
     }
@@ -838,6 +868,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     hasSubjectOptions,
     isLoading,
     errorMessage,
+    infoMessage,
     dateRangeLabel,
     latestUpdatedLabel,
     kpiCards,

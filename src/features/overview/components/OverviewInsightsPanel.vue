@@ -1,7 +1,9 @@
 <template>
   <aside class="border-color rounded-2xl bg-surface-0 p-4 dark:bg-surface-900">
     <div>
-      <p class="text-xs font-medium uppercase tracking-wider text-surface-500 dark:text-surface-300">
+      <p
+        class="text-xs font-medium uppercase tracking-wider text-surface-500 dark:text-surface-300"
+      >
         Weekly Goal
       </p>
       <p class="mt-2 text-lg font-semibold text-surface-900 dark:text-surface-0">
@@ -13,7 +15,9 @@
           Progress {{ formattedWeeklyGoalProgress }}%
         </p>
       </div>
-      <p class="mt-2 text-xs text-surface-500 dark:text-surface-300">Last updated {{ latestUpdatedLabel }}</p>
+      <p class="mt-2 text-xs text-surface-500 dark:text-surface-300">
+        Last updated {{ latestUpdatedLabel }}
+      </p>
     </div>
 
     <div class="mt-5">
@@ -27,7 +31,9 @@
           <div class="flex items-start gap-2">
             <i :class="[insight.icon, insightToneClass(insight.tone)]" class="mt-0.5" />
             <div>
-              <p class="text-sm font-medium text-surface-900 dark:text-surface-0">{{ insight.title }}</p>
+              <p class="text-sm font-medium text-surface-900 dark:text-surface-0">
+                {{ insight.title }}
+              </p>
               <p class="mt-1 text-xs leading-5 text-surface-500 dark:text-surface-300">
                 {{ insight.description }}
               </p>

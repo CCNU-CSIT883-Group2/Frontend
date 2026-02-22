@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-2">
-    <div class="flex justify-between gap-2">
+    <div class="flex flex-wrap justify-between gap-2 sm:flex-nowrap">
       <FloatLabel class="flex-1" variant="on">
         <Select
           v-model="selectedSubject"
@@ -23,13 +23,14 @@
 
       <Button
         icon="pi pi-plus"
+        class="shrink-0"
         severity="secondary"
         size="small"
         @click="isCreateRequested = true"
       />
     </div>
 
-    <div class="flex justify-between gap-2">
+    <div class="flex flex-wrap justify-between gap-2 sm:flex-nowrap">
       <FloatLabel class="flex-1" variant="on">
         <Select
           v-model="selectedTag"
@@ -53,6 +54,7 @@
       <SelectButton
         v-model="selectedProgress"
         :options="progressStatusOptions"
+        class="shrink-0"
         data-key="value"
         option-label="value"
         size="small"

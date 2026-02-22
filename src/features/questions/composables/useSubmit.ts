@@ -11,6 +11,13 @@ interface SubmitQuestionsPayload {
   answers: number[][]
 }
 
+interface SubmitResult {
+  answeredMap: Map<number, boolean>
+  successCount: number
+  failureCount: number
+  firstError: string | null
+}
+
 export function useSubmit() {
   const { name: username } = storeToRefs(useUserStore())
 
@@ -26,39 +33,73 @@ export function useSubmit() {
     questionId: number,
     choiceAnswers: number[],
   ) => {
-    try {
-      const response = await axios.post<Response<AttemptPostData>>('/attempt', {
-        username: username.value,
-        history_id: historyId,
-        question_id: questionId,
-        type,
-        choice_answers: choiceAnswers,
-      })
+    const response = await axios.post<Response<AttemptPostData>>('/attempt', {
+      username: username.value,
+      history_id: historyId,
+      question_id: questionId,
+      type,
+      choice_answers: choiceAnswers,
+    })
 
-      answeredMap.value.set(response.data.data.attempt.question_id, true)
-    } catch (submitError) {
-      error.value = submitError instanceof Error ? submitError.message : String(submitError)
-    } finally {
-      pendingCount.value -= 1
-    }
+    return response.data.data.attempt.question_id
   }
 
-  const submit = async ({ historyId, type, questionIds, answers }: SubmitQuestionsPayload) => {
+  const submit = async ({
+    historyId,
+    type,
+    questionIds,
+    answers,
+  }: SubmitQuestionsPayload): Promise<SubmitResult> => {
     answeredMap.value = new Map()
     error.value = null
     pendingCount.value = questionIds.length
 
     if (questionIds.length === 0) {
-      return answeredMap.value
+      return {
+        answeredMap: answeredMap.value,
+        successCount: 0,
+        failureCount: 0,
+        firstError: null,
+      }
     }
 
-    await Promise.allSettled(
+    const settledResults = await Promise.allSettled(
       questionIds.map((questionId, index) =>
         submitRequest(historyId, type, questionId, answers[index] ?? []),
       ),
     )
 
-    return answeredMap.value
+    const nextAnsweredMap = new Map<number, boolean>()
+    const errors: string[] = []
+
+    settledResults.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        nextAnsweredMap.set(result.value, true)
+        return
+      }
+
+      const message = result.reason instanceof Error ? result.reason.message : String(result.reason)
+      errors.push(message)
+    })
+
+    answeredMap.value = nextAnsweredMap
+
+    const firstError = errors[0] ?? null
+    const failureCount = errors.length
+    const successCount = nextAnsweredMap.size
+
+    if (failureCount > 0) {
+      error.value = firstError
+    }
+
+    pendingCount.value = 0
+
+    return {
+      answeredMap: nextAnsweredMap,
+      successCount,
+      failureCount,
+      firstError,
+    }
   }
 
   return {

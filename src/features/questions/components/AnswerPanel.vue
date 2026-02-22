@@ -1,24 +1,26 @@
 <template>
-  <div class="flex flex-1">
-    <div class="flex justify-between gap-2 flex-1">
+  <div class="flex flex-1 min-h-0">
+    <div class="flex flex-1 min-h-0 flex-col gap-2 xl:flex-row">
       <QuestionList
         v-model:attempts="attempts"
         v-model:is-answer-saved="isAnswerSaved"
         v-model:scroll-to="scrollToIndex"
         :questions="questions"
-        class="flex-1"
+        class="flex-1 min-h-0 min-w-0"
       />
 
-      <div class="flex-none w-72 p-2 border rounded-2xl flex flex-col gap-2 border-color">
+      <div class="w-full p-2 border rounded-2xl flex flex-col gap-2 border-color xl:flex-none xl:w-72">
         <div class="flex gap-2 flex-col">
-          <span class="font-extrabold px-4 pt-1">Questions:</span>
+          <span class="font-extrabold px-2 pt-1 xl:px-4">Questions:</span>
 
-          <div class="gap-4 grid grid-cols-4 px-4">
+          <div
+            class="grid grid-cols-6 gap-2 px-1 max-h-40 overflow-y-auto sm:grid-cols-8 md:grid-cols-10 xl:grid-cols-4 xl:gap-4 xl:px-4 xl:max-h-none"
+          >
             <Button
               v-for="(_, index) in questions"
               :key="index"
               :variant="attempts[index]?.length === 0 ? 'outlined' : undefined"
-              class="w-12 h-12"
+              class="w-full aspect-square max-w-[3rem] mx-auto"
               severity="secondary"
               @click="scrollToQuestion(index)"
             >
@@ -40,7 +42,7 @@ import QuestionList from '@/features/questions/components/QuestionList.vue'
 import { useAttempts } from '@/features/questions/composables/useAttempts'
 import { useQuestions } from '@/features/questions/composables/useQuestions'
 import type { Question } from '@/types'
-import { onUnmounted, ref, watch } from 'vue'
+import { nextTick, onUnmounted, ref, watch } from 'vue'
 
 interface AnswerPanelProps {
   historyId: number
@@ -99,7 +101,12 @@ onUnmounted(() => {
 })
 
 const scrollToIndex = ref(-1)
-const scrollToQuestion = (questionIndex: number) => {
+const scrollToQuestion = async (questionIndex: number) => {
+  if (scrollToIndex.value === questionIndex) {
+    scrollToIndex.value = -1
+    await nextTick()
+  }
+
   scrollToIndex.value = questionIndex
 }
 </script>
