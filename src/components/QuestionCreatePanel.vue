@@ -12,16 +12,16 @@
           <input-text id="subject" class="w-full" name="subject" v-model="question.subject" />
           <label for="subject">Subject</label>
         </float-label>
-        <message v-if="form.states.subject?.invalid" severity="error" size="small" variant="simple">
-          {{ form.states.subject.error?.message }}
+        <message v-if="form.states?.subject?.invalid" severity="error" size="small" variant="simple">
+          {{ form.states?.subject?.error?.message }}
         </message>
 
         <float-label variant="on" class="w-full">
           <input-text id="tag" class="w-full" name="tag" v-model="question.tag" />
           <label for="tag">Tag</label>
         </float-label>
-        <message v-if="form.states.tag?.invalid" severity="error" size="small" variant="simple">
-          {{ form.states.tag.error?.message }}
+        <message v-if="form.states?.tag?.invalid" severity="error" size="small" variant="simple">
+          {{ form.states?.tag?.error?.message }}
         </message>
 
         <div class="flex justify-between flex-wrap">
