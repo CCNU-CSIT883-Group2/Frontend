@@ -9,6 +9,8 @@ declare module 'vue' {
   export interface GlobalComponents {
     AnswerPanel: typeof import('./src/components/AnswerPanel.vue')['default']
     Button: typeof import('primevue/button')['default']
+    Card: typeof import('primevue/card')['default']
+    Chart: typeof import('primevue/chart')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
     CircleProgressBar: typeof import('./src/components/CircleProgressBar.vue')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
@@ -23,6 +25,8 @@ declare module 'vue' {
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
     Message: typeof import('primevue/message')['default']
+    OverviewChartsPanel: typeof import('./src/components/overview/OverviewChartsPanel.vue')['default']
+    OverviewToolbar: typeof import('./src/components/overview/OverviewToolbar.vue')['default']
     QuestionCreatePanel: typeof import('./src/components/QuestionCreatePanel.vue')['default']
     QuestionList: typeof import('./src/components/QuestionList.vue')['default']
     QuestionListItem: typeof import('./src/components/QuestionListItem.vue')['default']
@@ -33,6 +37,7 @@ declare module 'vue' {
     ScrollPanel: typeof import('primevue/scrollpanel')['default']
     Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
+    Skeleton: typeof import('primevue/skeleton')['default']
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
   }
