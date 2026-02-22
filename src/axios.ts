@@ -12,7 +12,7 @@ axiosInstance.interceptors.request.use(
     if (config.url === '/login' || config.url === '/register') {
       return config
     }
-    const token = localStorage.getItem('token') || useUserStore().token
+    const token = useUserStore().token || localStorage.getItem('token')
 
     if (token) {
       config.headers['Authorization'] = token

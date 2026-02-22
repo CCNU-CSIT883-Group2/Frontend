@@ -1,12 +1,8 @@
 <template>
   <div
-    class="h-14 flex p-4 divide-x divide-solid bg-surface-100 dark:bg-surface-800 divide-surface-300 dark:divide-surface-600 border-b border-surface-200 dark:border-surface-500"
-  >
+    class="h-14 flex p-4 divide-x divide-solid bg-surface-100 dark:bg-surface-800 divide-surface-300 dark:divide-surface-600 border-b border-surface-200 dark:border-surface-500">
     <div class="flex justify-center flex-none">
-      <i
-        class="pi pi-prime text-surface-950 dark:text-surface-400 mr-3"
-        style="font-size: 1.5rem"
-      />
+      <i class="pi pi-prime text-surface-950 dark:text-surface-400 mr-3" style="font-size: 1.5rem"></i>
     </div>
 
     <div class="flex-1 flex justify-between">
@@ -36,12 +32,8 @@
           </div>
           <div class="flex justify-between items-center">
             <span>Show Difficulty: </span>
-            <Select
-              :options="models"
-              :default-value="settings.questions.generate_model"
-              v-model="settings.questions.generate_model"
-              size="small"
-            />
+            <Select :options="models" :default-value="settings.questions.generate_model"
+              v-model="settings.questions.generate_model" size="small"></Select>
           </div>
         </div>
       </Dialog>
@@ -56,12 +48,11 @@
 <script setup lang="ts">
 import HeaderBarButton from '@/components/HeaderBarButton.vue'
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useDark, useToggle } from '@vueuse/core'
 import { useUserSettingsStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
 
-const router = useRouter()
+
 
 const topAreaActions = ref([
   { icon: 'pencil', to: 'questions' },
