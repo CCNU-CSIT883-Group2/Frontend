@@ -101,6 +101,53 @@ export interface StatisticsData {
   daily_statistics: DailyStatistics[]
 }
 
+export type OverviewInsightTone = 'positive' | 'neutral' | 'warning'
+
+export interface OverviewSummaryData {
+  total_attempts: number
+  correct_attempts: number
+  accuracy_rate: number
+  active_days: number
+  streak_days: number
+  weekly_goal: number
+  weekly_goal_progress: number
+  subject_rank: number
+  active_subject_count: number
+}
+
+export interface OverviewDailyData {
+  date: string
+  total_attempts: number
+  correct_attempts: number
+  incorrect_attempts: number
+  accuracy_rate: number
+}
+
+export interface OverviewSubjectData {
+  subject: string
+  total_attempts: number
+  correct_attempts: number
+  accuracy_rate: number
+}
+
+export interface OverviewInsightData {
+  id: string
+  title: string
+  description: string
+  tone: OverviewInsightTone
+}
+
+export interface OverviewDashboardData {
+  latest_time: string
+  start_of_week: string
+  end_of_week: string
+  focus_subject: string
+  summary: OverviewSummaryData
+  daily_overview: OverviewDailyData[]
+  subject_overview: OverviewSubjectData[]
+  insights: OverviewInsightData[]
+}
+
 export interface CreateQuestionRequest {
   name: string
   subject: string
