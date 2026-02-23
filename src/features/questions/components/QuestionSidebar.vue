@@ -1,10 +1,13 @@
 <template>
+  <!-- 侧边栏容器：flex 布局，高度撑满父元素，支持折叠/展开动画 -->
   <div
     :class="[
       'p-2 border rounded-2xl flex h-full min-h-0 border-color bg-surface-0 dark:bg-surface-900 transition-[padding] duration-200 flex-col gap-2',
     ]"
   >
+    <!-- 展开状态：显示历史过滤器和历史列表 -->
     <template v-if="!props.collapsed">
+      <!-- HistoryFilter：学科/标签过滤 + 进度状态切换 + 新建按钮 -->
       <HistoryFilter
         v-model:create="isCreateRequested"
         v-model:filter="historyFilter"
@@ -12,13 +15,16 @@
         :tags="tags"
       />
 
+      <!-- HistoryList：可滚动的历史记录列表，支持单击选中、双击删除 -->
       <div class="w-full flex flex-1 min-h-0 overflow-hidden">
         <HistoryList v-model:selected="selectedHistoryId" :histories="filteredHistories" />
       </div>
     </template>
 
+    <!-- 折叠状态：列表区域替换为空白占位，保持布局结构 -->
     <div v-else class="flex-1 w-full" />
 
+    <!-- 折叠/展开按钮：固定在底部，折叠时居中，展开时右对齐 -->
     <div class="w-full flex mt-auto" :class="props.collapsed ? 'justify-center' : 'justify-end'">
       <Button
         :icon="props.collapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"
@@ -50,6 +56,7 @@ import { useQuestionSidebar } from '@/features/questions/composables/useQuestion
 
 const props = withDefaults(
   defineProps<{
+    /** 是否处于折叠状态（折叠时隐藏列表内容，仅显示切换按钮） */
     collapsed?: boolean
   }>(),
   {
@@ -57,11 +64,15 @@ const props = withDefaults(
   },
 )
 
+/** 通知父组件切换侧边栏折叠状态 */
 const emit = defineEmits<{
   (e: 'toggle-collapse'): void
 }>()
 
+/** 当前选中的题集 ID（-1 表示未选中） */
 const selectedHistoryId = defineModel<number>('selected', { default: -1 })
+
+// 从 composable 获取创建请求标志、筛选条件、过滤后的历史列表，以及学科和标签选项
 const { isCreateRequested, historyFilter, filteredHistories, subjects, tags } = useQuestionSidebar({
   selectedHistoryId,
 })

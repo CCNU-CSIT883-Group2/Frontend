@@ -1,7 +1,10 @@
 <template>
+  <!-- 全屏居中布局，深色模式自适应 -->
   <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center">
     <div class="bg-surface-0 dark:bg-surface-900 p-12 shadow-lg rounded-lg w-full max-w-3xl">
+      <!-- 顶部区域：Logo SVG + 标题 + 注册引导链接 -->
       <div class="text-center mb-8">
+        <!-- ChatCNU Logo（SVG 内联，深浅模式通过 fill 类切换颜色） -->
         <svg
           class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16"
           viewBox="0 0 30 32"
@@ -21,11 +24,13 @@
         <span class="text-surface-600 dark:text-surface-200 font-medium leading-normal">
           Don't have an account?
         </span>
+        <!-- 跳转注册页的链接 -->
         <a class="font-medium no-underline ml-2 text-primary cursor-pointer" @click="goToRegister">
           Create today!
         </a>
       </div>
 
+      <!-- 登录表单：Enter 提交（@submit.prevent 阻止页面刷新） -->
       <form class="space-y-4" @submit.prevent="handleLogin">
         <div>
           <label for="name" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block"
@@ -47,8 +52,10 @@
           />
         </div>
 
+        <!-- 登录失败时显示错误提示 -->
         <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
 
+        <!-- 忘记密码链接（右对齐） -->
         <div class="flex items-center justify-end">
           <a
             class="font-medium no-underline text-primary text-right cursor-pointer"
@@ -58,6 +65,7 @@
           </a>
         </div>
 
+        <!-- 登录按钮：提交中时显示加载状态并禁用点击 -->
         <Button
           label="Sign In"
           icon="pi pi-user"
@@ -87,6 +95,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 
+// 所有状态和逻辑均由 composable 提供，本组件只负责模板渲染
 const {
   form,
   isSubmitting,

@@ -1,10 +1,12 @@
 <template>
+  <!-- 全屏居中布局 -->
   <div
     class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center px-4"
   >
     <div
       class="bg-surface-0 dark:bg-surface-900 p-8 shadow-lg rounded-lg w-full max-w-2xl flex flex-col items-center"
     >
+      <!-- 顶部：Logo + 标题 + 登录引导 -->
       <div class="text-center mb-6 w-full">
         <svg
           class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16"
@@ -28,7 +30,9 @@
         </div>
       </div>
 
+      <!-- 注册表单 -->
       <form class="flex flex-col space-y-3 w-full max-w-lg" @submit.prevent="handleRegister">
+        <!-- 用户角色选择 -->
         <div class="flex flex-col">
           <label for="user-role" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
             >User Role</label
@@ -44,6 +48,7 @@
           />
         </div>
 
+        <!-- 用户名 -->
         <div class="flex flex-col">
           <label for="username" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
             >Username</label
@@ -54,6 +59,7 @@
           </FloatLabel>
         </div>
 
+        <!-- 邮箱 -->
         <div class="flex flex-col">
           <label for="email" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
             >Email</label
@@ -64,6 +70,7 @@
           </FloatLabel>
         </div>
 
+        <!-- 密码 + 强度指示器 -->
         <div class="flex flex-col">
           <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2"
             >Password</label
@@ -78,6 +85,7 @@
             />
             <label for="password">Password</label>
           </FloatLabel>
+          <!-- 有输入时展示密码强度进度条（label/color/width 均由 composable 计算） -->
           <div v-if="form.password" class="mt-2">
             <div class="text-sm mb-1">Password Strength: {{ passwordStrength.label }}</div>
             <div class="h-2 rounded-full w-full bg-gray-200">
@@ -90,6 +98,7 @@
           </div>
         </div>
 
+        <!-- 确认密码 + 匹配状态提示 -->
         <div class="flex flex-col">
           <label
             for="confirm-password"
@@ -107,12 +116,14 @@
             />
             <label for="confirm-password">Confirm Password</label>
           </FloatLabel>
+          <!-- 有输入时展示匹配/不匹配状态 -->
           <div v-if="form.confirmPassword" class="mt-1 text-sm">
             <span v-if="!passwordMismatch" class="text-green-600">Passwords match</span>
             <span v-else class="text-red-600">Passwords do not match</span>
           </div>
         </div>
 
+        <!-- 服务条款同意区 -->
         <div class="flex justify-between items-center">
           <div class="flex items-center">
             <Checkbox id="terms" v-model="isTermsAccepted" class="mr-2" :binary="true" />
@@ -120,16 +131,19 @@
               I accept the terms and conditions
             </label>
           </div>
+          <!-- 点击查看服务条款弹窗 -->
           <a class="font-medium text-primary cursor-pointer" @click="isTermsDialogVisible = true"
             >Read Terms</a
           >
         </div>
 
+        <!-- 错误/成功消息提示 -->
         <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
         <Message v-if="successMessage" severity="success" :closable="false">{{
           successMessage
         }}</Message>
 
+        <!-- 注册按钮：需同意条款 + canSubmit（密码强度足够）才可点击 -->
         <Button
           label="Register"
           icon="pi pi-user-plus"
@@ -141,6 +155,7 @@
       </form>
     </div>
 
+    <!-- 服务条款弹窗（点击"Read Terms"触发） -->
     <Dialog
       v-model:visible="isTermsDialogVisible"
       :style="{ width: '50vw' }"
@@ -150,6 +165,7 @@
       <p>Please follow the platform terms and conditions.</p>
       <template #footer>
         <Button label="Cancel" icon="pi pi-times" @click="isTermsDialogVisible = false" />
+        <!-- 同意按钮：设置 isTermsAccepted = true 并关闭弹窗 -->
         <Button label="Agree" icon="pi pi-check" @click="agreeTerms" />
       </template>
     </Dialog>
@@ -175,6 +191,7 @@ import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
+
 const {
   roles,
   form,

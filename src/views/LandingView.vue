@@ -1,9 +1,11 @@
 <template>
   <div>
+    <!-- 首屏 Hero 区域：全屏居中布局，展示品牌名称和主 CTA 按钮 -->
     <div
       class="bg-surface-0 dark:bg-surface-950 w-screen h-screen flex items-center justify-center lg:px-20"
     >
       <div class="text-surface-700 dark:text-surface-100 text-center">
+        <!-- 技术标签：强调 AI 驱动 -->
         <div class="text-primary font-bold mb-4">
           <i class="pi pi-brain" />&nbsp;POWERED BY CHATGPT
         </div>
@@ -13,6 +15,7 @@
         <div class="text-surface-700 dark:text-surface-100 text-2xl mb-8">
           Revolutionize question generation with the power of ChatGPT.
         </div>
+        <!-- 主 CTA 按钮：跳转到登录页 -->
         <Button
           class="font-bold px-8 py-4 whitespace-nowrap"
           icon="pi pi-brain"
@@ -24,6 +27,7 @@
       </div>
     </div>
 
+    <!-- 特性介绍区域：三列网格展示核心功能 -->
     <div class="bg-surface-0 dark:bg-surface-950 px-6 py-20 md:px-12 lg:px-20 text-center">
       <div class="mb-4 font-bold text-3xl">
         <span class="text-surface-900 dark:text-surface-0">Discover, </span>
@@ -33,8 +37,10 @@
         Transform your learning and teaching experiences with AI-driven solutions.
       </div>
 
+      <!-- 特性卡片列表：每个卡片包含图标、标题和描述 -->
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-3.5 gap-y-6">
         <div v-for="feature in features" :key="feature.title" class="w-full p-4">
+          <!-- 图标容器：圆角卡片 + 阴影，视觉层次感 -->
           <span
             class="w-16 h-16 mb-6 rounded-lg flex items-center justify-center mx-auto bg-surface-0 dark:bg-surface-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.12),0px_0px_2px_0px_rgba(0,0,0,0.06),0px_4px_10px_0px_rgba(0,0,0,0.03)]"
           >
@@ -71,6 +77,7 @@ import { ROUTE_NAMES } from '@/router'
 import Button from 'primevue/button'
 import { useRouter } from 'vue-router'
 
+/** 产品特性列表，每项包含 PrimeVue 图标名、标题和描述 */
 const features = [
   {
     icon: 'pi-user',
@@ -107,6 +114,7 @@ const features = [
 
 const router = useRouter()
 
+/** 跳转到登录页（Get Started 按钮点击处理） */
 const goToLogin = () => {
   void router.push({ name: ROUTE_NAMES.login })
 }

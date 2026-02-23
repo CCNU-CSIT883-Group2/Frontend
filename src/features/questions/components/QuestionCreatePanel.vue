@@ -1,6 +1,8 @@
 <template>
+  <!-- 创建面板容器：flex 居中布局，限制最大宽度 -->
   <div class="flex flex-1 min-h-0 justify-center">
     <section class="mt-4 w-full max-w-[44rem] px-2 py-3 sm:mt-8 sm:px-4 sm:py-5 lg:mt-10 lg:px-6">
+      <!-- 标题区 -->
       <header class="mb-5 sm:mb-6">
         <p class="text-xs font-medium uppercase tracking-wide text-surface-500 dark:text-surface-300">
           Quiz Setup
@@ -13,7 +15,9 @@
         </p>
       </header>
 
+      <!-- 创建表单：提交时触发 composable 中的 onFormSubmit -->
       <form class="flex w-full flex-col gap-3.5" @submit.prevent="onFormSubmit">
+        <!-- 学科字段 -->
         <div class="flex flex-col gap-1.5">
           <FloatLabel class="w-full" variant="on">
             <InputText
@@ -26,11 +30,13 @@
             />
             <label for="subject">Subject</label>
           </FloatLabel>
+          <!-- 字段校验错误提示 -->
           <Message v-if="formErrors.subject" severity="error" size="small" variant="simple">
             {{ formErrors.subject }}
           </Message>
         </div>
 
+        <!-- 标签/知识点字段 -->
         <div class="flex flex-col gap-1.5">
           <FloatLabel class="w-full" variant="on">
             <InputText
@@ -48,7 +54,9 @@
           </Message>
         </div>
 
+        <!-- 题目数量 + 题目类型行 -->
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <!-- 题目数量输入（最小值 1） -->
           <div class="flex w-full flex-col gap-1.5 sm:w-1/2">
             <FloatLabel class="w-full" variant="on">
               <InputNumber
@@ -68,20 +76,24 @@
             </Message>
           </div>
 
+          <!-- 题目类型切换：Single Choice / Multiple Choice -->
           <SelectButton v-model="formState.type" :options="questionTypes" class="w-full sm:w-auto" name="type"
             option-label="label" option-value="value" size="small" :disabled="isStreaming" />
         </div>
 
+        <!-- 提交按钮：生成中时显示加载状态 -->
         <Button :loading="isStreaming" :disabled="isStreaming" class="mt-1 w-full" label="Start Quiz" severity="primary"
           type="submit" />
       </form>
 
+      <!-- 生成进度条：流式生成开始后才显示 -->
       <div v-if="isStreaming || createProgress.total > 0" class="mt-5 pb-5">
         <div class="mb-1 text-sm font-medium text-surface-700 dark:text-surface-200">
           Generating questions: {{ createProgress.current }} / {{ createProgress.total }} ({{
             createProgress.percent
           }}%)
         </div>
+        <!-- 进度条宽度由百分比控制，CSS transition 实现平滑增长 -->
         <div class="h-2 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700">
           <div class="h-full bg-primary transition-all" :style="{ width: `${createProgress.percent}%` }"></div>
         </div>
@@ -103,6 +115,7 @@
 
 import { useQuestionCreateForm } from '@/features/questions/composables/useQuestionCreateForm'
 
+// 所有逻辑均由 composable 提供，本组件只负责模板渲染
 const { questionTypes, formState, formErrors, createProgress, isStreaming, onFormSubmit } =
   useQuestionCreateForm()
 </script>

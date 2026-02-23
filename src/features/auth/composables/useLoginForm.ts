@@ -15,18 +15,26 @@ import type { LoginData, Response } from '@/types'
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+/** 登录表单字段结构 */
 interface LoginForm {
   name: string
   password: string
 }
 
+/**
+ * 登录页逻辑 composable。
+ * 管理表单双向绑定、提交状态、错误展示，以及登录成功后的跳转逻辑。
+ */
 export const useLoginForm = () => {
+  /** 响应式表单数据，与模板输入框双向绑定 */
   const form = reactive<LoginForm>({
     name: '',
     password: '',
   })
 
+  /** 是否正在提交（用于禁用按钮、展示加载动画） */
   const isSubmitting = ref(false)
+  /** 登录失败时展示的错误提示信息 */
   const errorMessage = ref('')
 
   const userStore = useUserStore()
@@ -34,16 +42,23 @@ export const useLoginForm = () => {
   const router = useRouter()
   const route = useRoute()
 
+  /** 跳转到密码找回页，并清空当前错误信息 */
   const goToPasswordRecovery = () => {
     errorMessage.value = ''
     void router.push({ name: ROUTE_NAMES.backPassword })
   }
 
+  /** 跳转到注册页，并清空当前错误信息 */
   const goToRegister = () => {
     errorMessage.value = ''
     void router.push({ name: ROUTE_NAMES.register })
   }
 
+  /**
+   * 计算登录成功后的目标路径。
+   * 若 URL 携带 redirect 查询参数（路由守卫注入），优先回跳；
+   * 否则默认进入题目页。
+   */
   const getRedirectPath = () => {
     const redirect = route.query.redirect
     if (typeof redirect === 'string' && redirect.length > 0) {
@@ -53,6 +68,13 @@ export const useLoginForm = () => {
     return router.resolve({ name: ROUTE_NAMES.questions }).fullPath
   }
 
+  /**
+   * 处理登录提交：
+   * 1. 前端基础校验（非空判断）；
+   * 2. 调用 /login 接口；
+   * 3. 成功时写入用户状态和可用模型列表，然后跳转；
+   * 4. 失败时展示错误信息。
+   */
   const handleLogin = async () => {
     if (!form.name.trim() || !form.password) {
       errorMessage.value = 'Please fill in all fields'
@@ -73,6 +95,7 @@ export const useLoginForm = () => {
         throw new Error(response.data.info || 'Login response is invalid')
       }
 
+      // 将后端返回的用户信息写入 Pinia store（自动持久化到 localStorage）
       userStore.setUser({
         name: loginData.user.name,
         user_id: loginData.user.user_id,
@@ -81,6 +104,7 @@ export const useLoginForm = () => {
         role: loginData.user.role,
       })
 
+      // 模型列表可能在 loginData.models 或 loginData.user.models，优先取前者
       const loginModels = Array.isArray(loginData.models)
         ? loginData.models
         : Array.isArray(loginData.user.models)
@@ -88,6 +112,7 @@ export const useLoginForm = () => {
           : []
       userSettingsStore.setAvailableModels(loginModels)
 
+      // 跳转（包括可能的回跳）
       await router.push(getRedirectPath())
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : 'Login failed, please try again'

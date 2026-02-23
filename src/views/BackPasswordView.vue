@@ -1,6 +1,8 @@
 <template>
+  <!-- 全屏居中布局 -->
   <div class="bg-surface-50 dark:bg-surface-950 w-screen h-screen flex items-center justify-center">
     <div class="bg-surface-0 dark:bg-surface-900 p-12 shadow-lg rounded-lg w-full max-w-3xl">
+      <!-- Logo + 标题 -->
       <div class="text-center mb-8">
         <svg
           class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16"
@@ -24,12 +26,18 @@
       </div>
 
       <div class="space-y-4 w-full">
+        <!--
+          第一阶段（isRecovering=true）：邮箱输入 + 验证码发送 + 验证码校验。
+          第二阶段（isRecovering=false）：新密码设置 + 确认提交。
+        -->
         <template v-if="isRecovering">
+          <!-- 邮箱输入框 -->
           <FloatLabel variant="in">
             <InputText id="email" v-model="email" variant="filled" class="w-full" />
             <label for="email">Email</label>
           </FloatLabel>
 
+          <!-- 验证码输入框 -->
           <FloatLabel variant="in">
             <InputText
               id="verification-code"
@@ -40,6 +48,7 @@
             <label for="verification-code">Verification Code</label>
           </FloatLabel>
 
+          <!-- 发送验证码按钮 + 倒计时（发送后禁用，倒计时结束后恢复） -->
           <div class="flex items-center gap-3">
             <Button
               label="Send Verification Code"
@@ -55,6 +64,7 @@
         </template>
 
         <template v-else>
+          <!-- 新密码输入框（支持明文/密文切换） -->
           <FloatLabel variant="in">
             <InputText
               id="new-password"
@@ -67,6 +77,7 @@
           </FloatLabel>
 
           <div class="flex items-center gap-2 text-sm">
+            <!-- 切换新密码明文/密文 -->
             <Button
               icon="pi pi-eye"
               severity="secondary"
@@ -76,6 +87,7 @@
             <span>Password strength: {{ passwordStrength }}</span>
           </div>
 
+          <!-- 确认密码输入框 -->
           <FloatLabel variant="in">
             <InputText
               id="confirm-password"
@@ -88,6 +100,7 @@
           </FloatLabel>
 
           <div class="flex items-center gap-2 text-sm">
+            <!-- 切换确认密码明文/密文 -->
             <Button
               icon="pi pi-eye"
               severity="secondary"
@@ -97,6 +110,7 @@
             <span>Toggle confirm password visibility</span>
           </div>
 
+          <!-- 密码不匹配提示 -->
           <Message v-if="passwordMismatch" severity="error" :closable="false">
             Passwords do not match.
           </Message>
@@ -104,6 +118,7 @@
           <Button label="Confirm Reset" class="w-full" @click="confirmModification" />
         </template>
 
+        <!-- 操作状态消息（成功/失败，严重性由 composable 确定） -->
         <Message v-if="statusMessage" :severity="statusMessageSeverity" :closable="false">{{
           statusMessage
         }}</Message>
@@ -128,6 +143,7 @@ import Button from 'primevue/button'
 import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+
 const {
   email,
   verificationCode,

@@ -1,4 +1,5 @@
 <template>
+  <!-- 直接渲染 ProfileWorkspace 容器组件，该组件内部处理所有 profile 逻辑 -->
   <ProfileWorkspace />
 </template>
 

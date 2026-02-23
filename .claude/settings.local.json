@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/lzzzt/Code/JavaScript/ChatCNU/src/features/profile/components/ProfilePreferencesSection.vue:*)",
+      "Bash(/Users/lzzzt/Code/JavaScript/ChatCNU/src/features/questions/composables/useAnswerPanelState.ts:*)",
+      "Bash(/Users/lzzzt/Code/JavaScript/ChatCNU/src/:*)",
+      "Bash(/Users/lzzzt/Code/JavaScript/ChatCNU/src/features/questions/components/QuestionListItem.vue:*)"
+    ]
+  }
+}

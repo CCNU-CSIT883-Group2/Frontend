@@ -1,7 +1,10 @@
 <template>
+  <!-- ScrollPanel 提供自定义滚动条样式（通过 CSS 变量控制宽度） -->
   <ScrollPanel class="flex-1 p-0">
+    <!-- ConfirmDialog 实例：全局单例，通过 useConfirm 服务触发弹窗 -->
     <ConfirmDialog />
     <div class="flex flex-col gap-1">
+      <!-- 历史记录列表：单击选中，双击触发删除确认 -->
       <HistoryListItem
         v-for="historyItem in histories"
         :key="historyItem.history_id"
@@ -35,17 +38,25 @@ import type { History } from '@/types'
 import { useConfirm, useToast } from 'primevue'
 
 interface HistoryListProps {
+  /** 经过筛选后的历史记录列表 */
   histories: History[]
 }
 
 defineProps<HistoryListProps>()
 
+/** 当前选中的题集 ID（-1 表示未选中） */
 const selectedHistoryId = defineModel<number>('selected', { default: -1 })
 
 const toast = useToast()
 const confirm = useConfirm()
 const historyStore = useQuestionHistoryStore()
 
+/**
+ * 显示删除确认弹窗（双击列表项时触发）。
+ * 确认后调用 store.deleteHistory：
+ * - 成功：将 selectedHistoryId 重置为 -1，弹出 info 通知；
+ * - 失败：弹出 error 通知，不改变选中状态。
+ */
 const confirmDelete = (historyId: number) => {
   confirm.require({
     message: 'Are you sure you want to delete this history?',
@@ -63,6 +74,7 @@ const confirmDelete = (historyId: number) => {
       const deleted = await historyStore.deleteHistory(historyId)
 
       if (deleted) {
+        // 删除成功后取消选中，触发右侧面板切换回创建面板
         selectedHistoryId.value = -1
         toast.add({ severity: 'info', summary: 'Deleted', detail: 'History deleted', life: 3000 })
         return
@@ -80,6 +92,7 @@ const confirmDelete = (historyId: number) => {
 </script>
 
 <style scoped>
+/* 覆盖 PrimeVue ScrollPanel 的滚动条宽度为 8px */
 * {
   --p-scrollpanel-bar-size: 8px;
 }

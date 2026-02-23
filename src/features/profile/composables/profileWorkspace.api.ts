@@ -11,9 +11,14 @@
 import axios from '@/axios'
 import type { ProfileUpdateRequest, Response } from '@/types'
 
+/**
+ * 向后端提交用户资料更新请求（/profile 接口）。
+ * - 若后端返回 code !== 200，抛出带有服务端信息的 Error，由调用方统一展示；
+ * - 成功时返回后端 info 字段（用于展示成功提示）。
+ */
 export const submitProfileUpdate = async (
   payload: ProfileUpdateRequest,
-  fallbackErrorMessage: string,
+  fallbackErrorMessage: string, // 后端信息缺失时的兜底错误文案
 ) => {
   const response = await axios.post<Response<unknown>>('/profile', payload)
   if (response.data.code !== 200) {
@@ -23,6 +28,10 @@ export const submitProfileUpdate = async (
   return response.data.info
 }
 
+/**
+ * 向后端提交登出请求（/logout 接口）。
+ * 调用方应在此函数返回（无论成功或失败）后，继续执行本地状态清除和路由跳转。
+ */
 export const submitLogout = async () => {
   await axios.post('/logout')
 }

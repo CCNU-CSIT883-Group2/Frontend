@@ -1,7 +1,9 @@
 <template>
+  <!-- 顶部固定导航栏：左侧 Logo + 主导航；右侧工具按钮（深色模式、设置、个人资料） -->
   <div
     class="fixed inset-x-0 top-0 z-40 h-14 flex p-4 divide-x divide-solid bg-surface-100 dark:bg-surface-800 divide-surface-300 dark:divide-surface-600 border-b border-surface-200 dark:border-surface-500"
   >
+    <!-- Logo 区域 -->
     <div class="flex justify-center flex-none">
       <i
         class="pi pi-prime text-surface-950 dark:text-surface-400 mr-3"
@@ -9,7 +11,9 @@
       ></i>
     </div>
 
+    <!-- 导航区域：左侧主导航 + 右侧工具操作 -->
     <div class="flex-1 flex justify-between">
+      <!-- 主导航按钮组（题目、统计概览等） -->
       <div class="flex items-center gap-4 ml-3">
         <AppHeaderActionButton
           v-for="action in navigationActions"
@@ -19,15 +23,20 @@
         />
       </div>
 
+      <!-- 右侧工具按钮组 -->
       <div class="flex items-center gap-4 mr-3">
+        <!-- 深色/浅色模式切换按钮：图标随当前模式动态切换 -->
         <AppHeaderActionButton
           :icon="darkMode ? 'sun' : 'moon'"
           @click="userSettingsStore.toggleDarkMode()"
         />
+        <!-- 打开设置弹窗 -->
         <AppHeaderActionButton icon="cog" @click="isSettingsVisible = true" />
+        <!-- 跳转到个人资料页 -->
         <AppHeaderActionButton :to="ROUTE_NAMES.profile" icon="users" />
       </div>
 
+      <!-- 设置弹窗：修改深色模式、题目显示选项、AI 模型选择 -->
       <Dialog
         v-model:visible="isSettingsVisible"
         header="Settings"
@@ -39,6 +48,7 @@
         </p>
 
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <!-- 深色模式开关 -->
           <div
             class="flex items-center justify-between rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
           >
@@ -56,6 +66,7 @@
             />
           </div>
 
+          <!-- 是否显示题目难度标签 -->
           <div
             class="flex items-center justify-between rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
           >
@@ -70,6 +81,7 @@
             <ToggleSwitch v-model="settings.questions.showDifficulty" />
           </div>
 
+          <!-- 是否显示建议用时 -->
           <div
             class="flex items-center justify-between rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
           >
@@ -84,6 +96,7 @@
             <ToggleSwitch v-model="settings.questions.showTime" />
           </div>
 
+          <!-- AI 出题模型选择（从后端动态加载） -->
           <div
             class="rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
           >
@@ -123,16 +136,20 @@ import { useUserSettingsStore } from '@/stores/userStore'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 
+/** 主导航按钮配置（顺序即为显示顺序） */
 const navigationActions = [
-  { icon: 'pencil', to: ROUTE_NAMES.questions },
-  { icon: 'chart-bar', to: ROUTE_NAMES.overview },
+  { icon: 'pencil', to: ROUTE_NAMES.questions },   // 题目练习页
+  { icon: 'chart-bar', to: ROUTE_NAMES.overview },  // 统计概览页
 ] as const
 
+/** 设置弹窗的显示控制 */
 const isSettingsVisible = ref(false)
 
 const userSettingsStore = useUserSettingsStore()
+// storeToRefs 解构：确保 settings/darkMode/availableModels 保持响应性
 const { settings, darkMode, availableModels, isLoadingModels } = storeToRefs(userSettingsStore)
 
+// 组件挂载时从后端加载可用 AI 模型列表（有缓存则跳过网络请求）
 onMounted(() => {
   void userSettingsStore.loadAvailableModels()
 })
