@@ -19,14 +19,15 @@
     </div>
 
     <section class="flex w-full flex-col gap-4 pt-24 pb-3 lg:pt-24 lg:pb-3">
-      <Message v-if="!hasSubjectOptions" severity="info" :closable="false">
+      <Message v-if="!isLoading && errorMessage" severity="error" :closable="false">
+        {{ errorMessage }}
+      </Message>
+
+      <Message v-else-if="!isLoading && !hasSubjectOptions" severity="info" :closable="false">
         No subjects found. Start a quiz first to generate statistics.
       </Message>
 
-      <Message v-else-if="errorMessage" severity="error" :closable="false">
-        {{ errorMessage }}
-      </Message>
-      <Message v-else-if="infoMessage" severity="info" :closable="false">
+      <Message v-else-if="!isLoading && infoMessage" severity="info" :closable="false">
         {{ infoMessage }}
       </Message>
 
@@ -43,6 +44,9 @@
         v-else-if="hasSubjectOptions"
         :kpi-cards="kpiCards"
         :insights="insights"
+        :is-tag-view="isTagView"
+        :selected-tag="selectedTag"
+        :tags="tags"
         :weekly-goal-target="weeklyGoalTarget"
         :weekly-goal-completed="weeklyGoalCompleted"
         :weekly-goal-progress="weeklyGoalProgress"
@@ -55,6 +59,7 @@
         :subject-accuracy-chart-options="subjectAccuracyChartOptions"
         :distribution-chart-data="distributionChartData"
         :distribution-chart-options="distributionChartOptions"
+        @update:selected-tag="handleTagChange"
       />
     </section>
   </div>
@@ -69,6 +74,9 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 const {
   selectedSubject,
   subjects,
+  selectedTag,
+  tags,
+  isTagView,
   hasSubjectOptions,
   isLoading,
   errorMessage,
@@ -90,6 +98,10 @@ const {
   distributionChartOptions,
   shareCurrentStatistics,
 } = useOverviewStatistics()
+
+const handleTagChange = (nextTag: string) => {
+  selectedTag.value = nextTag
+}
 
 const pageRef = ref<HTMLElement | null>(null)
 const hasScrolled = ref(false)

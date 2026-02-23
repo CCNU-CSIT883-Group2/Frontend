@@ -6,7 +6,11 @@
       <header class="mb-3">
         <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">Accuracy Trend</h3>
         <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">
-          How your selected subject evolves across this week
+          {{
+            isTagView
+              ? 'How your selected subject evolves across this week'
+              : 'How your subjects evolve across this week'
+          }}
         </p>
       </header>
       <Chart
@@ -32,12 +36,28 @@
       class="border-color rounded-2xl bg-surface-0 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-surface-900"
     >
       <header class="mb-3">
-        <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">
-          Correct vs Incorrect
-        </h3>
-        <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">
-          Daily attempt quality with stacked comparison
-        </p>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">
+              Correct vs Incorrect
+            </h3>
+            <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">
+              {{
+                isTagView
+                  ? 'Daily tag attempt quality with stacked comparison'
+                  : 'Daily subject attempt quality with stacked comparison'
+              }}
+            </p>
+          </div>
+          <Select
+            v-if="isTagView && tags.length > 0"
+            v-model="selectedTagModel"
+            :options="tags"
+            class="w-44"
+            placeholder="Select tag"
+            size="small"
+          />
+        </div>
       </header>
       <Chart
         type="bar"
@@ -52,10 +72,10 @@
     >
       <header class="mb-3">
         <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">
-          Subject Accuracy Ranking
+          {{ isTagView ? 'Tag Accuracy Ranking' : 'Subject Accuracy Ranking' }}
         </h3>
         <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">
-          Compare current week accuracy across subjects
+          {{ isTagView ? 'Compare current week accuracy across tags' : 'Compare current week accuracy across subjects' }}
         </p>
       </header>
       <Chart
@@ -73,7 +93,9 @@
         <h3 class="text-base font-semibold text-surface-900 dark:text-surface-0">
           Attempt Distribution
         </h3>
-        <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">Workload split by subject</p>
+        <p class="mt-1 text-sm text-surface-500 dark:text-surface-300">
+          {{ isTagView ? 'Workload split by tag' : 'Workload split by subject' }}
+        </p>
       </header>
       <Chart
         type="doughnut"
@@ -89,8 +111,9 @@
 import OverviewInsightsPanel from '@/features/overview/components/OverviewInsightsPanel.vue'
 import type { OverviewInsight } from '@/features/overview/composables/useOverviewStatistics'
 import type { ChartData, ChartOptions } from 'chart.js'
+import { computed } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   accuracyTrendChartData: ChartData<'line'>
   accuracyTrendChartOptions: ChartOptions<'line'>
   attemptsStackedChartData: ChartData<'bar'>
@@ -99,10 +122,22 @@ defineProps<{
   subjectAccuracyChartOptions: ChartOptions<'bar'>
   distributionChartData: ChartData<'doughnut', number[], string>
   distributionChartOptions: ChartOptions<'doughnut'>
+  isTagView: boolean
+  selectedTag: string
+  tags: string[]
   insights: OverviewInsight[]
   weeklyGoalTarget: number
   weeklyGoalCompleted: number
   weeklyGoalProgress: number
   latestUpdatedLabel: string
 }>()
+
+const emit = defineEmits<{
+  'update:selectedTag': [value: string]
+}>()
+
+const selectedTagModel = computed({
+  get: () => props.selectedTag,
+  set: (value: string) => emit('update:selectedTag', value),
+})
 </script>

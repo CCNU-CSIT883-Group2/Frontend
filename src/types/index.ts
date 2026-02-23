@@ -145,7 +145,53 @@ export interface OverviewDashboardData {
   summary: OverviewSummaryData
   daily_overview: OverviewDailyData[]
   subject_overview: OverviewSubjectData[]
-  insights: OverviewInsightData[]
+  insights?: OverviewInsightData[]
+}
+
+export interface OverviewTagData {
+  tag: string
+  total_attempts: number
+  correct_attempts: number
+  incorrect_attempts: number
+  accuracy_rate: number
+  active_days: number
+}
+
+export interface OverviewDailyTagItemData {
+  tag: string
+  total_attempts: number
+  correct_attempts: number
+  incorrect_attempts: number
+  accuracy_rate: number
+}
+
+export interface OverviewDailyTagData {
+  date: string
+  tags: OverviewDailyTagItemData[]
+}
+
+export interface OverviewSubjectSummaryData {
+  total_attempts: number
+  correct_attempts: number
+  accuracy_rate: number
+  active_days: number
+  streak_days: number
+  weekly_goal: number
+  weekly_goal_progress: number
+  tag_count: number
+  tag_rank: number
+}
+
+export interface OverviewSubjectDashboardData {
+  latest_time: string
+  start_of_week: string
+  end_of_week: string
+  focus_subject: string
+  focus_tag: string
+  summary: OverviewSubjectSummaryData
+  daily_overview: OverviewDailyData[]
+  tag_overview: OverviewTagData[]
+  daily_tag_overview: OverviewDailyTagData[]
 }
 
 export interface ProfileTrendDailyData {

@@ -17,14 +17,16 @@
           id="subjects"
           v-model="selectedSubject"
           :disabled="subjects.length === 0"
-          :options="subjects"
+          :options="subjectOptions"
+          option-label="label"
+          option-value="value"
           class="w-60"
-          placeholder="Select subject"
+          placeholder="All subjects"
         />
       </div>
 
       <Button
-        :disabled="subjects.length === 0"
+        :disabled="subjects.length === 0 || !selectedSubject"
         icon="pi pi-share-alt"
         label="Share"
         severity="secondary"
@@ -35,12 +37,19 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   subjects: string[]
   dateRangeLabel: string
 }>()
 
 const selectedSubject = defineModel<string>({ default: '' })
+
+const subjectOptions = computed(() => [
+  { label: 'All Subjects', value: '' },
+  ...props.subjects.map((subject) => ({ label: subject, value: subject })),
+])
 
 const emit = defineEmits<{
   share: []

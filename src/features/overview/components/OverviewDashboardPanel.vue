@@ -11,11 +11,15 @@
       :subject-accuracy-chart-options="subjectAccuracyChartOptions"
       :distribution-chart-data="distributionChartData"
       :distribution-chart-options="distributionChartOptions"
+      :is-tag-view="isTagView"
+      :selected-tag="selectedTag"
+      :tags="tags"
       :insights="insights"
       :weekly-goal-target="weeklyGoalTarget"
       :weekly-goal-completed="weeklyGoalCompleted"
       :weekly-goal-progress="weeklyGoalProgress"
       :latest-updated-label="latestUpdatedLabel"
+      @update:selected-tag="emit('update:selectedTag', $event)"
     />
   </div>
 </template>
@@ -32,6 +36,9 @@ import type {
 defineProps<{
   kpiCards: OverviewKpiCard[]
   insights: OverviewInsight[]
+  isTagView: boolean
+  selectedTag: string
+  tags: string[]
   weeklyGoalTarget: number
   weeklyGoalCompleted: number
   weeklyGoalProgress: number
@@ -44,5 +51,9 @@ defineProps<{
   subjectAccuracyChartOptions: ChartOptions<'bar'>
   distributionChartData: ChartData<'doughnut', number[], string>
   distributionChartOptions: ChartOptions<'doughnut'>
+}>()
+
+const emit = defineEmits<{
+  'update:selectedTag': [value: string]
 }>()
 </script>

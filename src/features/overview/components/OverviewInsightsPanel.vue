@@ -4,7 +4,7 @@
       <p
         class="text-xs font-medium uppercase tracking-wider text-surface-500 dark:text-surface-300"
       >
-        Weekly Goal
+        Global Weekly Goal
       </p>
       <p class="mt-2 text-lg font-semibold text-surface-900 dark:text-surface-0">
         {{ weeklyGoalCompleted }} / {{ weeklyGoalTarget }} attempts
