@@ -1,167 +1,27 @@
 import axios from '@/axios'
+import {
+  DEFAULT_MODEL_OPTIONS,
+  EMPTY_USER,
+  USER_SETTINGS_STORAGE_KEY,
+  USER_STORAGE_KEY,
+  clearLegacyUser,
+  createDefaultUserSettings,
+  getLegacyUser,
+  getStorage,
+  normalizeModelCode,
+  normalizeModelCodes,
+  normalizeUserSettings,
+  normalizeUserState,
+  toQuestionModelOption,
+  type ModelsData,
+  type QuestionModelOption,
+  type UserSettingsState,
+  type UserState,
+} from '@/stores/userStore.helpers'
 import type { Response } from '@/types'
 import { computed, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import { useDark, useStorage } from '@vueuse/core'
-
-interface UserState {
-  name: string
-  user_id: string
-  token: string
-  email: string
-  role: string
-}
-
-type QuestionGenerateModel = string
-
-interface UserSettingsState {
-  questions: {
-    showDifficulty: boolean
-    showTime: boolean
-    generateModel: QuestionGenerateModel
-  }
-}
-
-interface ModelsData {
-  name: string
-  models: string[]
-}
-
-interface QuestionModelOption {
-  label: string
-  value: QuestionGenerateModel
-}
-
-const MODEL_LABEL_BY_CODE: Record<string, string> = {
-  C: 'ChatGPT',
-  K: 'Kimi',
-  D: 'Doubao',
-  T: 'Test',
-  G: 'GLM',
-}
-
-const MODEL_CODE_BY_ALIAS: Record<string, string> = {
-  C: 'C',
-  CHATGPT: 'C',
-  K: 'K',
-  KIMI: 'K',
-  D: 'D',
-  DOUBAO: 'D',
-  T: 'T',
-  TEST: 'T',
-  G: 'G',
-  GLM: 'G',
-}
-
-const DEFAULT_MODEL_OPTIONS: QuestionModelOption[] = [
-  { label: MODEL_LABEL_BY_CODE.C, value: 'C' },
-  { label: MODEL_LABEL_BY_CODE.K, value: 'K' },
-]
-
-const normalizeModelCode = (rawModel: string) => {
-  const normalized = rawModel.trim().toUpperCase()
-  if (!normalized) return ''
-  return MODEL_CODE_BY_ALIAS[normalized] ?? normalized
-}
-
-const toQuestionModelOption = (modelCode: string): QuestionModelOption => ({
-  value: modelCode,
-  label: MODEL_LABEL_BY_CODE[modelCode] ?? modelCode,
-})
-
-const normalizeModelCodes = (rawModels: string[]) =>
-  Array.from(new Set(rawModels.map(normalizeModelCode).filter(Boolean)))
-
-const USER_STORAGE_KEY = 'user'
-const USER_SETTINGS_STORAGE_KEY = 'user_settings'
-
-const LEGACY_USER_STORAGE_KEYS = {
-  name: 'username',
-  userId: 'user_id',
-  token: 'token',
-  email: 'email',
-  role: 'role',
-} as const
-
-const EMPTY_USER: UserState = {
-  name: '',
-  user_id: '',
-  token: '',
-  email: '',
-  role: '',
-}
-
-const DEFAULT_USER_SETTINGS: UserSettingsState = {
-  questions: {
-    showDifficulty: true,
-    showTime: false,
-    generateModel: 'C',
-  },
-}
-
-const normalizeString = (value: unknown) => (typeof value === 'string' ? value : '')
-
-const normalizeUserState = (value: Partial<UserState> | null | undefined): UserState => ({
-  name: normalizeString(value?.name),
-  user_id: normalizeString(value?.user_id),
-  token: normalizeString(value?.token),
-  email: normalizeString(value?.email),
-  role: normalizeString(value?.role),
-})
-
-const normalizeUserSettings = (
-  value: Partial<UserSettingsState> | null | undefined,
-): UserSettingsState => {
-  const generateModel = normalizeModelCode(value?.questions?.generateModel ?? '')
-
-  return {
-    questions: {
-      showDifficulty:
-        typeof value?.questions?.showDifficulty === 'boolean'
-          ? value.questions.showDifficulty
-          : DEFAULT_USER_SETTINGS.questions.showDifficulty,
-      showTime:
-        typeof value?.questions?.showTime === 'boolean'
-          ? value.questions.showTime
-          : DEFAULT_USER_SETTINGS.questions.showTime,
-      generateModel: generateModel || DEFAULT_USER_SETTINGS.questions.generateModel,
-    },
-  }
-}
-
-const createDefaultUserSettings = (): UserSettingsState => ({
-  questions: { ...DEFAULT_USER_SETTINGS.questions },
-})
-
-const getStorage = () => {
-  if (typeof window === 'undefined') return null
-
-  try {
-    return window.localStorage
-  } catch {
-    return null
-  }
-}
-
-const getLegacyUser = (storage: Storage): UserState | null => {
-  const hasLegacyData = Object.values(LEGACY_USER_STORAGE_KEYS).some(
-    (key) => storage.getItem(key) !== null,
-  )
-
-  if (!hasLegacyData) return null
-
-  return normalizeUserState({
-    name: storage.getItem(LEGACY_USER_STORAGE_KEYS.name) ?? EMPTY_USER.name,
-    user_id: storage.getItem(LEGACY_USER_STORAGE_KEYS.userId) ?? EMPTY_USER.user_id,
-    token: storage.getItem(LEGACY_USER_STORAGE_KEYS.token) ?? EMPTY_USER.token,
-    email: storage.getItem(LEGACY_USER_STORAGE_KEYS.email) ?? EMPTY_USER.email,
-    role: storage.getItem(LEGACY_USER_STORAGE_KEYS.role) ?? EMPTY_USER.role,
-  })
-}
-
-const clearLegacyUser = (storage: Storage) => {
-  Object.values(LEGACY_USER_STORAGE_KEYS).forEach((key) => storage.removeItem(key))
-}
 
 export const useUserStore = defineStore('user', () => {
   const storage = getStorage()

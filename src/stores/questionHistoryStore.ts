@@ -1,9 +1,15 @@
 import axios from '@/axios'
 import { API_BASE_URL } from '@/config'
 import { streamQuestionCreation } from '@/services/questionCreationStream'
+import {
+  DEFAULT_CREATE_PROGRESS,
+  buildCreateRequestPayload,
+  toDonePayloadFromCreateData,
+  updateHistoryProgressState,
+  upsertHistoryItem,
+} from '@/stores/questionHistory.helpers'
 import { useUserSettingsStore, useUserStore } from '@/stores/userStore'
 import type {
-  CreateQuestionRequest,
   History,
   QuestionsCreateData,
   QuestionsCreateProgressState,
@@ -12,12 +18,6 @@ import type {
 } from '@/types'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
-
-const DEFAULT_PROGRESS: QuestionsCreateProgressState = {
-  total: 0,
-  current: 0,
-  percent: 0,
-}
 
 export const useQuestionHistoryStore = defineStore('questionHistory', () => {
   const histories = shallowRef<History[]>([])
@@ -28,7 +28,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
   const isStreaming = ref(false)
   const createError = ref<string | null>(null)
   const donePayload = shallowRef<QuestionsCreateStreamDonePayload | null>(null)
-  const createProgress = shallowRef<QuestionsCreateProgressState>({ ...DEFAULT_PROGRESS })
+  const createProgress = shallowRef<QuestionsCreateProgressState>({ ...DEFAULT_CREATE_PROGRESS })
 
   const subjects = computed(() =>
     Array.from(new Set(histories.value.map((history) => history.subject))).sort(),
@@ -47,7 +47,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
   const resetCreateState = () => {
     createError.value = null
     donePayload.value = null
-    createProgress.value = { ...DEFAULT_PROGRESS }
+    createProgress.value = { ...DEFAULT_CREATE_PROGRESS }
   }
 
   const markHistoryCreated = (historyId: number) => {
@@ -61,32 +61,8 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
   }
 
   const upsertHistory = (history: History) => {
-    const existingIndex = histories.value.findIndex(
-      (currentHistory) => currentHistory.history_id === history.history_id,
-    )
-
-    if (existingIndex >= 0) {
-      const nextHistories = [...histories.value]
-      nextHistories[existingIndex] = history
-      histories.value = nextHistories
-      return
-    }
-
-    histories.value = [...histories.value, history]
+    histories.value = upsertHistoryItem(histories.value, history)
   }
-
-  const buildCreateRequest = (
-    subject: string,
-    tag: string,
-    number: number,
-    type: string,
-  ): CreateQuestionRequest => ({
-    subject,
-    tag,
-    number,
-    type,
-    model: settings.value.questions.generateModel || 'C',
-  })
 
   const applyCreateDonePayload = (payload: QuestionsCreateStreamDonePayload) => {
     donePayload.value = payload
@@ -99,25 +75,14 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     markHistoryCreated(payload.history.history_id)
   }
 
-  const createWithFallback = async (requestPayload: CreateQuestionRequest) => {
+  const createWithFallback = async (
+    requestPayload: ReturnType<typeof buildCreateRequestPayload>,
+  ) => {
     const response = await axios.post<Response<QuestionsCreateData>>(
       '/questions/create',
       requestPayload,
     )
-    const data = response.data.data
-
-    if (!data?.history?.length) {
-      throw new Error('No history returned from /questions/create')
-    }
-
-    applyCreateDonePayload({
-      history: data.history[0],
-      number: data.number,
-      questions: data.questions,
-      subject: data.subject,
-      tag: data.tag,
-      type: data.type,
-    })
+    applyCreateDonePayload(toDonePayloadFromCreateData(response.data.data))
   }
 
   const fetchHistories = async (): Promise<string | null> => {
@@ -140,7 +105,13 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     clearCreatedHistoryState()
     resetCreateState()
 
-    const requestPayload = buildCreateRequest(subject, tag, number, type)
+    const requestPayload = buildCreateRequestPayload({
+      subject,
+      tag,
+      number,
+      type,
+      model: settings.value.questions.generateModel,
+    })
 
     try {
       await streamQuestionCreation({
@@ -168,7 +139,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
       try {
         await createWithFallback(requestPayload)
       } catch (fallbackError) {
-        createProgress.value = { ...DEFAULT_PROGRESS }
+        createProgress.value = { ...DEFAULT_CREATE_PROGRESS }
         createError.value =
           fallbackError instanceof Error
             ? fallbackError.message
@@ -198,16 +169,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
   }
 
   const updateHistoryProgress = (historyId: number, progress: number) => {
-    const existingIndex = histories.value.findIndex((history) => history.history_id === historyId)
-    if (existingIndex < 0) return
-
-    const normalizedProgress = Math.min(1, Math.max(0, progress))
-    const nextHistories = [...histories.value]
-    nextHistories[existingIndex] = {
-      ...nextHistories[existingIndex],
-      progress: normalizedProgress,
-    }
-    histories.value = nextHistories
+    histories.value = updateHistoryProgressState(histories.value, historyId, progress)
   }
 
   return {
