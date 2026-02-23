@@ -146,6 +146,30 @@ watch(createError, (message) => {
   })
 })
 
+watch(
+  () => formState.subject,
+  () => {
+    if (!formErrors.subject) return
+    formErrors.subject = ''
+  },
+)
+
+watch(
+  () => formState.tag,
+  () => {
+    if (!formErrors.tag) return
+    formErrors.tag = ''
+  },
+)
+
+watch(
+  () => formState.number,
+  () => {
+    if (!formErrors.number) return
+    formErrors.number = ''
+  },
+)
+
 const validateForm = () => {
   formErrors.subject = formState.subject.trim() ? '' : 'Subject is required.'
   formErrors.tag = formState.tag.trim() ? '' : 'Tag is required.'

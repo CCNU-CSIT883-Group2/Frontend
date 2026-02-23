@@ -1,7 +1,5 @@
 import axios from '@/axios'
-import { useUserStore } from '@/stores/userStore'
 import type { AttemptPostData, Response } from '@/types'
-import { storeToRefs } from 'pinia'
 import { computed, shallowRef } from 'vue'
 
 interface SubmitQuestionsPayload {
@@ -19,8 +17,6 @@ interface SubmitResult {
 }
 
 export function useSubmit() {
-  const { name: username } = storeToRefs(useUserStore())
-
   const pendingCount = shallowRef(0)
   const answeredMap = shallowRef<Map<number, boolean>>(new Map())
   const error = shallowRef<string | null>(null)
@@ -34,7 +30,6 @@ export function useSubmit() {
     choiceAnswers: number[],
   ) => {
     const response = await axios.post<Response<AttemptPostData>>('/attempt', {
-      username: username.value,
       history_id: historyId,
       question_id: questionId,
       type,

@@ -1,15 +1,11 @@
 import axios from '@/axios'
-import { useUserStore } from '@/stores/userStore'
 import type { Attempt, Response } from '@/types'
-import { storeToRefs } from 'pinia'
 import { onScopeDispose, shallowRef } from 'vue'
 
 export function useAttempts(historyId: number) {
   const isFetching = shallowRef(false)
   const attempts = shallowRef<Attempt[]>([])
   const error = shallowRef<string | null>(null)
-
-  const { name: username } = storeToRefs(useUserStore())
 
   let controller: AbortController | null = null
 
@@ -29,7 +25,7 @@ export function useAttempts(historyId: number) {
 
     try {
       const response = await axios.get<Response<Attempt[]>>('/attempt', {
-        params: { history_id: historyId, username: username.value },
+        params: { history_id: historyId },
         signal: requestController.signal,
       })
       attempts.value = response.data.data ?? []
