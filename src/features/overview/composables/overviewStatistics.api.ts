@@ -10,10 +10,6 @@
 
 import axios from '@/axios'
 import {
-  buildOverviewDashboardMockData,
-  buildOverviewSubjectDashboardMockData,
-} from '@/features/overview/mocks/overviewDashboardMock'
-import {
   buildRequestParams,
   getTagFromQuery,
 } from '@/features/overview/composables/overviewStatistics.helpers'
@@ -23,21 +19,19 @@ import type {
   Response,
 } from '@/types'
 
+/** fetchOverviewDashboardData 的入参 */
 interface FetchOverviewDashboardOptions {
-  isMockMode: boolean
-  subjects: string[]
+  /** 当前路由查询参数（用于提取 week_start / tz 等过滤条件） */
   routeQuery: Record<string, unknown>
 }
 
+/**
+ * 获取全局概览仪表板数据。
+ * 请求后端 /dashboard/overview 接口，携带时区和周起始等参数。
+ */
 export const fetchOverviewDashboardData = async ({
-  isMockMode,
-  subjects,
   routeQuery,
 }: FetchOverviewDashboardOptions) => {
-  if (isMockMode) {
-    return buildOverviewDashboardMockData(subjects)
-  }
-
   const response = await axios.get<Response<OverviewDashboardData>>('/dashboard/overview', {
     params: buildRequestParams(routeQuery),
   })
@@ -45,26 +39,26 @@ export const fetchOverviewDashboardData = async ({
   return response.data.data
 }
 
+/** fetchOverviewSubjectDashboardData 的入参 */
 interface FetchOverviewSubjectDashboardOptions {
-  isMockMode: boolean
+  /** 当前选中的学科名称 */
   subject: string
-  subjects: string[]
+  /** 当前路由查询参数 */
   routeQuery: Record<string, unknown>
 }
 
+/**
+ * 获取指定学科的细分概览数据。
+ * 请求后端 /dashboard/overview/subject，附带 subject 和 tag 过滤条件。
+ */
 export const fetchOverviewSubjectDashboardData = async ({
-  isMockMode,
   subject,
-  subjects,
   routeQuery,
 }: FetchOverviewSubjectDashboardOptions) => {
-  if (isMockMode) {
-    return buildOverviewSubjectDashboardMockData(subject, subjects)
-  }
-
   const response = await axios.get<Response<OverviewSubjectDashboardData>>(
     '/dashboard/overview/subject',
     {
+      // 同时传入 subject 和从 URL 中提取的 tag 作为过滤条件
       params: buildRequestParams(routeQuery, subject, getTagFromQuery(routeQuery)),
     },
   )
