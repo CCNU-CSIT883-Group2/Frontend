@@ -80,10 +80,10 @@ export interface RegisterResponse {
 }
 
 export interface ProfileUpdateRequest {
-  name: string
   new_name: string | null
   new_email: string | null
   new_password: string | null
+  new_weekly_goal?: number | null
 }
 
 export interface DailyStatistics {
@@ -148,8 +148,21 @@ export interface OverviewDashboardData {
   insights: OverviewInsightData[]
 }
 
+export interface ProfileTrendDailyData {
+  date: string
+  total_attempts: number
+  correct_attempts: number
+  incorrect_attempts?: number
+}
+
+export interface ProfileTrendData {
+  latest_time: string
+  start_date: string
+  end_date: string
+  daily_trend: ProfileTrendDailyData[]
+}
+
 export interface CreateQuestionRequest {
-  name: string
   subject: string
   tag: string
   type: string
