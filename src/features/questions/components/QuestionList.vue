@@ -34,18 +34,17 @@
 
 <script setup lang="ts">
 import QuestionListItem from '@/features/questions/components/QuestionListItem.vue'
+import { useQuestionElapsedTimer } from '@/features/questions/composables/useQuestionElapsedTimer'
+import { useQuestionListState } from '@/features/questions/composables/useQuestionListState'
 import { useSubmit } from '@/features/questions/composables/useSubmit'
 import { useQuestionHistoryStore } from '@/stores/questionHistoryStore'
 import { useUserSettingsStore } from '@/stores/userStore'
 import type { Question } from '@/types'
-import { useIntervalFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue'
 import {
   computed,
   nextTick,
-  onUnmounted,
-  ref,
   type ComponentPublicInstance,
   useTemplateRef,
   watch,
@@ -64,44 +63,19 @@ const questions = computed(() => props.questions)
 const isAnswerSaved = defineModel<boolean>('isAnswerSaved', { default: false })
 const scrollToQuestionIndex = defineModel<number>('scrollTo', { default: -1 })
 const attempts = defineModel<number[][]>('attempts', { default: () => [] as number[][] })
-
-const resetToken = ref(0)
-const collapsedStates = ref<boolean[]>([])
-const answeredStates = ref<boolean[]>([])
 const questionRef = useTemplateRef<ComponentPublicInstance[]>('questionRef')
 
-const syncStateWithQuestions = () => {
-  const questionCount = questions.value.length
+const { resetToken, collapsedStates, answeredStates, resetState: resetQuestionState } =
+  useQuestionListState({
+    questions,
+    attempts,
+    isAnswerSaved,
+  })
 
-  collapsedStates.value = Array.from(
-    { length: questionCount },
-    (_, index) => collapsedStates.value[index] ?? false,
-  )
-
-  attempts.value = Array.from({ length: questionCount }, (_, index) => attempts.value[index] ?? [])
-  answeredStates.value = Array.from({ length: questionCount }, () => isAnswerSaved.value)
-}
-
-watch(
-  () => questions.value,
-  syncStateWithQuestions,
-  { immediate: true },
-)
-
-watch(
+const { elapsedTime, resetElapsedTime } = useQuestionElapsedTimer({
   isAnswerSaved,
-  (saved) => {
-    if (saved) {
-      answeredStates.value = questions.value.map(() => true)
-      return
-    }
-
-    answeredStates.value = questions.value.map(
-      (_, index) => (attempts.value[index] ?? []).length > 0,
-    )
-  },
-  { immediate: true },
-)
+  questionCount: computed(() => questions.value.length),
+})
 
 const { settings } = storeToRefs(useUserSettingsStore())
 const historyStore = useQuestionHistoryStore()
@@ -156,11 +130,8 @@ const submitAnswers = async () => {
 }
 
 const resetState = () => {
-  attempts.value = questions.value.map(() => [])
-  answeredStates.value = questions.value.map(() => false)
-  isAnswerSaved.value = false
-  resetToken.value += 1
-  timeUsed.value = 0
+  resetQuestionState()
+  resetElapsedTime()
 }
 
 const scrollToQuestion = async (index: number) => {
@@ -181,38 +152,6 @@ watch(scrollToQuestionIndex, (index) => {
 
   void scrollToQuestion(index)
   scrollToQuestionIndex.value = -1
-})
-
-const timeUsed = ref(0)
-const elapsedTime = computed(() => {
-  const minute = Math.floor(timeUsed.value / 60)
-  const second = String(timeUsed.value % 60).padStart(2, '0')
-  return `${minute}:${second}`
-})
-
-const timer = useIntervalFn(
-  () => {
-    timeUsed.value += 1
-  },
-  1000,
-  { immediate: false },
-)
-
-watch(
-  [isAnswerSaved, () => questions.value.length],
-  ([saved, questionCount]) => {
-    if (saved || questionCount === 0) {
-      timer.pause()
-      return
-    }
-
-    timer.resume()
-  },
-  { immediate: true },
-)
-
-onUnmounted(() => {
-  timer.pause()
 })
 </script>
 
