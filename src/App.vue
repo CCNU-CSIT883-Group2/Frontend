@@ -2,7 +2,7 @@
   <div class="h-screen flex flex-col m-0 bg-surface-0 dark:bg-surface-950">
     <AppHeaderBar />
     <div
-      class="flex-1 overflow-y-scroll w-full h-full text-surface-950 dark:text-surface-0 no-scrollbar flex"
+      class="flex-1 overflow-y-scroll w-full h-full pt-14 text-surface-950 dark:text-surface-0 no-scrollbar flex"
     >
       <RouterView />
     </div>

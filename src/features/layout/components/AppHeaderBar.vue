@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-14 flex p-4 divide-x divide-solid bg-surface-100 dark:bg-surface-800 divide-surface-300 dark:divide-surface-600 border-b border-surface-200 dark:border-surface-500"
+    class="fixed inset-x-0 top-0 z-40 h-14 flex p-4 divide-x divide-solid bg-surface-100 dark:bg-surface-800 divide-surface-300 dark:divide-surface-600 border-b border-surface-200 dark:border-surface-500"
   >
     <div class="flex justify-center flex-none">
       <i
