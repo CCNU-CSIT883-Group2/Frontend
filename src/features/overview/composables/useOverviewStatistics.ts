@@ -13,6 +13,7 @@ import type {
   StatisticsData,
 } from '@/types'
 import type { ChartData, ChartOptions } from 'chart.js'
+import { useClipboard, watchIgnorable } from '@vueuse/core'
 import { computed, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -305,6 +306,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const isInitialRefreshTriggered = ref(false)
   const isSubjectPatchedFromResponse = ref(false)
   const currentSubjectDetail = shallowRef<OverviewSubjectDashboardData | null>(null)
+  const { copy: copyToClipboard, isSupported: isClipboardSupported } = useClipboard()
 
   const selectedStatistics = shallowRef<StatisticsData | null>(null)
   const kpiCards = shallowRef<OverviewKpiCard[]>([])
@@ -939,32 +941,40 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
       return
     }
 
+    if (!isClipboardSupported.value) {
+      errorMessage.value = 'Sharing is not supported in this browser.'
+      return
+    }
+
     try {
-      await navigator.clipboard.writeText(window.location.href)
+      await copyToClipboard(window.location.href)
       errorMessage.value = 'Sharing is not supported. URL copied to clipboard.'
     } catch {
       errorMessage.value = 'Sharing is not supported in this browser.'
     }
   }
 
-  watch(
+  let ignoreSubjectRouteUpdate: (updater: () => void) => void = (updater) => updater()
+  let ignoreTagRouteUpdate: (updater: () => void) => void = (updater) => updater()
+
+  watchIgnorable(
     () => route.query,
     (query) => {
       const querySubject = getSubjectFromQuery(query)
       const queryTag = getTagFromQuery(query)
 
-      if (querySubject !== selectedSubject.value) {
+      ignoreSubjectRouteUpdate(() => {
         selectedSubject.value = querySubject
-      }
+      })
 
-      if (queryTag !== selectedTag.value) {
+      ignoreTagRouteUpdate(() => {
         selectedTag.value = queryTag
-      }
+      })
     },
     { immediate: true },
   )
 
-  watch(
+  const { ignoreUpdates: ignoreSubjectSelectionUpdate } = watchIgnorable(
     selectedSubject,
     (subject) => {
       syncRouteSubject(subject)
@@ -979,8 +989,9 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     },
     { immediate: true },
   )
+  ignoreSubjectRouteUpdate = ignoreSubjectSelectionUpdate
 
-  watch(selectedTag, (tag) => {
+  const { ignoreUpdates: ignoreTagSelectionUpdate } = watchIgnorable(selectedTag, (tag) => {
     if (!isTagView.value) {
       return
     }
@@ -994,6 +1005,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     const tagDailyStatistics = buildStatisticsDataFromSubjectDetail(currentSubjectDetail.value, tag)
     updateAttemptsStackedChart(tagDailyStatistics.daily_statistics)
   })
+  ignoreTagRouteUpdate = ignoreTagSelectionUpdate
 
   watch([routeWeekStart, routeTimeZone], ([nextWeekStart, nextTimeZone], [prevWeekStart, prevTimeZone]) => {
     if (nextWeekStart === prevWeekStart && nextTimeZone === prevTimeZone) {

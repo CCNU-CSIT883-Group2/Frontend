@@ -167,7 +167,8 @@ import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
-import { computed, onUnmounted, reactive, ref } from 'vue'
+import { useTimeoutFn } from '@vueuse/core'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 type UserRole = 'teacher' | 'student'
@@ -198,9 +199,15 @@ const isTermsDialogVisible = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-let redirectTimer: ReturnType<typeof setTimeout> | null = null
 
 const router = useRouter()
+const { start: startRedirect, stop: stopRedirect } = useTimeoutFn(
+  () => {
+    void router.push({ name: ROUTE_NAMES.login })
+  },
+  600,
+  { immediate: false },
+)
 
 const passwordMismatch = computed(() => form.password !== form.confirmPassword)
 
@@ -261,9 +268,8 @@ const handleRegister = async () => {
     }
 
     successMessage.value = response.data.info || 'Registration successful'
-    redirectTimer = setTimeout(() => {
-      void router.push({ name: ROUTE_NAMES.login })
-    }, 600)
+    stopRedirect()
+    startRedirect()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Registration failed'
     successMessage.value = ''
@@ -271,9 +277,4 @@ const handleRegister = async () => {
     isSubmitting.value = false
   }
 }
-
-onUnmounted(() => {
-  if (!redirectTimer) return
-  clearTimeout(redirectTimer)
-})
 </script>

@@ -25,7 +25,7 @@ axiosInstance.interceptors.request.use(
     }
 
     const userStore = useUserStore()
-    const token = userStore.token || localStorage.getItem('token')
+    const token = userStore.token
 
     if (token) {
       config.headers = config.headers ?? {}

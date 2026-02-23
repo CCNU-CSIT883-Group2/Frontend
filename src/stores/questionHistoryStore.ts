@@ -145,7 +145,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     try {
       await streamQuestionCreation({
         baseUrl: API_BASE_URL,
-        token: token.value || localStorage.getItem('token') || '',
+        token: token.value || '',
         payload: requestPayload,
         onStart: (payload) => {
           createProgress.value = {

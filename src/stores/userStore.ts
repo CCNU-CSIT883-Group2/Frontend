@@ -2,7 +2,7 @@ import axios from '@/axios'
 import type { Response } from '@/types'
 import { computed, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
-import { useDark } from '@vueuse/core'
+import { useDark, useStorage } from '@vueuse/core'
 
 interface UserState {
   name: string
@@ -13,6 +13,14 @@ interface UserState {
 }
 
 type QuestionGenerateModel = string
+
+interface UserSettingsState {
+  questions: {
+    showDifficulty: boolean
+    showTime: boolean
+    generateModel: QuestionGenerateModel
+  }
+}
 
 interface ModelsData {
   name: string
@@ -64,7 +72,10 @@ const toQuestionModelOption = (modelCode: string): QuestionModelOption => ({
 const normalizeModelCodes = (rawModels: string[]) =>
   Array.from(new Set(rawModels.map(normalizeModelCode).filter(Boolean)))
 
-const STORAGE_KEYS = {
+const USER_STORAGE_KEY = 'user'
+const USER_SETTINGS_STORAGE_KEY = 'user_settings'
+
+const LEGACY_USER_STORAGE_KEYS = {
   name: 'username',
   userId: 'user_id',
   token: 'token',
@@ -80,31 +91,102 @@ const EMPTY_USER: UserState = {
   role: '',
 }
 
-function getStoredUser(): UserState {
+const DEFAULT_USER_SETTINGS: UserSettingsState = {
+  questions: {
+    showDifficulty: true,
+    showTime: false,
+    generateModel: 'C',
+  },
+}
+
+const normalizeString = (value: unknown) => (typeof value === 'string' ? value : '')
+
+const normalizeUserState = (value: Partial<UserState> | null | undefined): UserState => ({
+  name: normalizeString(value?.name),
+  user_id: normalizeString(value?.user_id),
+  token: normalizeString(value?.token),
+  email: normalizeString(value?.email),
+  role: normalizeString(value?.role),
+})
+
+const normalizeUserSettings = (
+  value: Partial<UserSettingsState> | null | undefined,
+): UserSettingsState => {
+  const generateModel = normalizeModelCode(value?.questions?.generateModel ?? '')
+
   return {
-    name: localStorage.getItem(STORAGE_KEYS.name) ?? EMPTY_USER.name,
-    user_id: localStorage.getItem(STORAGE_KEYS.userId) ?? EMPTY_USER.user_id,
-    token: localStorage.getItem(STORAGE_KEYS.token) ?? EMPTY_USER.token,
-    email: localStorage.getItem(STORAGE_KEYS.email) ?? EMPTY_USER.email,
-    role: localStorage.getItem(STORAGE_KEYS.role) ?? EMPTY_USER.role,
+    questions: {
+      showDifficulty:
+        typeof value?.questions?.showDifficulty === 'boolean'
+          ? value.questions.showDifficulty
+          : DEFAULT_USER_SETTINGS.questions.showDifficulty,
+      showTime:
+        typeof value?.questions?.showTime === 'boolean'
+          ? value.questions.showTime
+          : DEFAULT_USER_SETTINGS.questions.showTime,
+      generateModel: generateModel || DEFAULT_USER_SETTINGS.questions.generateModel,
+    },
   }
 }
 
-function persistUser(user: UserState) {
-  localStorage.setItem(STORAGE_KEYS.name, user.name)
-  localStorage.setItem(STORAGE_KEYS.userId, user.user_id)
-  localStorage.setItem(STORAGE_KEYS.token, user.token)
-  localStorage.setItem(STORAGE_KEYS.email, user.email)
-  localStorage.setItem(STORAGE_KEYS.role, user.role)
+const createDefaultUserSettings = (): UserSettingsState => ({
+  questions: { ...DEFAULT_USER_SETTINGS.questions },
+})
+
+const getStorage = () => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
 }
 
-function clearPersistedUser() {
-  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
+const getLegacyUser = (storage: Storage): UserState | null => {
+  const hasLegacyData = Object.values(LEGACY_USER_STORAGE_KEYS).some(
+    (key) => storage.getItem(key) !== null,
+  )
+
+  if (!hasLegacyData) return null
+
+  return normalizeUserState({
+    name: storage.getItem(LEGACY_USER_STORAGE_KEYS.name) ?? EMPTY_USER.name,
+    user_id: storage.getItem(LEGACY_USER_STORAGE_KEYS.userId) ?? EMPTY_USER.user_id,
+    token: storage.getItem(LEGACY_USER_STORAGE_KEYS.token) ?? EMPTY_USER.token,
+    email: storage.getItem(LEGACY_USER_STORAGE_KEYS.email) ?? EMPTY_USER.email,
+    role: storage.getItem(LEGACY_USER_STORAGE_KEYS.role) ?? EMPTY_USER.role,
+  })
+}
+
+const clearLegacyUser = (storage: Storage) => {
+  Object.values(LEGACY_USER_STORAGE_KEYS).forEach((key) => storage.removeItem(key))
 }
 
 export const useUserStore = defineStore('user', () => {
-  // User object is replaced as a whole for simpler persistence semantics.
-  const user = shallowRef<UserState>(getStoredUser())
+  const storage = getStorage()
+  const user = useStorage<UserState>(
+    USER_STORAGE_KEY,
+    normalizeUserState(EMPTY_USER),
+    storage ?? undefined,
+    { writeDefaults: false, mergeDefaults: true },
+  )
+  user.value = normalizeUserState(user.value)
+
+  if (storage) {
+    const legacyUser = getLegacyUser(storage)
+    const shouldApplyLegacyUser =
+      !!legacyUser && user.value.token.length === 0 && legacyUser.token.length > 0
+
+    if (shouldApplyLegacyUser) {
+      user.value = legacyUser
+    }
+
+    if (legacyUser) {
+      clearLegacyUser(storage)
+    }
+  }
+
   const isAuthenticated = computed(() => user.value.token !== '')
 
   const role = computed(() => user.value.role)
@@ -114,17 +196,18 @@ export const useUserStore = defineStore('user', () => {
   const token = computed(() => user.value.token)
 
   const setUser = (next: UserState) => {
-    user.value = { ...next }
-    persistUser(user.value)
+    user.value = normalizeUserState(next)
   }
 
   const patchUser = (partial: Partial<UserState>) => {
-    setUser({ ...user.value, ...partial })
+    user.value = normalizeUserState({
+      ...user.value,
+      ...partial,
+    })
   }
 
   const clearUser = () => {
     user.value = { ...EMPTY_USER }
-    clearPersistedUser()
   }
 
   return {
@@ -143,19 +226,19 @@ export const useUserStore = defineStore('user', () => {
 
 // Display preferences for question panels.
 export const useUserSettingsStore = defineStore('userSettings', () => {
+  const storage = getStorage()
   const darkMode = useDark()
   const availableModels = shallowRef<QuestionModelOption[]>([...DEFAULT_MODEL_OPTIONS])
   const isLoadingModels = ref(false)
   const hasLoadedModels = ref(false)
 
-  const settings = ref({
-    darkMode,
-    questions: {
-      showDifficulty: true,
-      showTime: false,
-      generateModel: 'C' as QuestionGenerateModel,
-    },
-  })
+  const settings = useStorage<UserSettingsState>(
+    USER_SETTINGS_STORAGE_KEY,
+    createDefaultUserSettings(),
+    storage ?? undefined,
+    { mergeDefaults: true },
+  )
+  settings.value = normalizeUserSettings(settings.value)
 
   const setDarkMode = (next: boolean) => {
     if (darkMode.value === next) return

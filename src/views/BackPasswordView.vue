@@ -118,7 +118,8 @@ import Button from 'primevue/button'
 import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
-import { computed, onUnmounted, ref } from 'vue'
+import { useIntervalFn, useTimeoutFn } from '@vueuse/core'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const email = ref('')
@@ -135,9 +136,6 @@ const statusMessageSeverity = ref<'success' | 'error' | 'info'>('info')
 
 const router = useRouter()
 
-let countdownTimer: ReturnType<typeof setInterval> | null = null
-let redirectTimer: ReturnType<typeof setTimeout> | null = null
-
 const passwordMismatch = computed(
   () =>
     !!newPassword.value && !!confirmPassword.value && newPassword.value !== confirmPassword.value,
@@ -153,22 +151,34 @@ const clearMessage = () => {
   statusMessage.value = ''
 }
 
-const startCountdown = () => {
-  countdown.value = 60
-  isSending.value = true
-
-  countdownTimer = window.setInterval(() => {
-    if (countdown.value > 0) {
-      countdown.value -= 1
+const { pause: pauseCountdown, resume: resumeCountdown } = useIntervalFn(
+  () => {
+    if (countdown.value <= 1) {
+      countdown.value = 0
+      isSending.value = false
+      pauseCountdown()
       return
     }
 
-    if (countdownTimer) {
-      window.clearInterval(countdownTimer)
-      countdownTimer = null
-    }
-    isSending.value = false
-  }, 1000)
+    countdown.value -= 1
+  },
+  1000,
+  { immediate: false },
+)
+
+const { start: startRedirect, stop: stopRedirect } = useTimeoutFn(
+  () => {
+    void router.push({ name: ROUTE_NAMES.login })
+  },
+  500,
+  { immediate: false },
+)
+
+const startCountdown = () => {
+  countdown.value = 60
+  isSending.value = true
+  pauseCountdown()
+  resumeCountdown()
 }
 
 const sendVerificationCode = () => {
@@ -215,18 +225,7 @@ const confirmModification = () => {
   statusMessageSeverity.value = 'success'
   statusMessage.value = 'Password reset completed. Redirecting to login...'
 
-  redirectTimer = setTimeout(() => {
-    void router.push({ name: ROUTE_NAMES.login })
-  }, 500)
+  stopRedirect()
+  startRedirect()
 }
-
-onUnmounted(() => {
-  if (countdownTimer) {
-    window.clearInterval(countdownTimer)
-  }
-
-  if (redirectTimer) {
-    window.clearTimeout(redirectTimer)
-  }
-})
 </script>

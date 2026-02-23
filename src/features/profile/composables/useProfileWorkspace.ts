@@ -3,6 +3,7 @@ import { ROUTE_NAMES } from '@/router'
 import { useUserStore } from '@/stores/userStore'
 import type { ProfileTrendData, ProfileUpdateRequest, Response } from '@/types'
 import type { ChartData, ChartOptions } from 'chart.js'
+import { useClipboard } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -62,6 +63,7 @@ export const useProfileWorkspace = () => {
   const errorMessage = ref('')
   const successMessage = ref('')
   const lastSavedAt = ref<Date | null>(null)
+  const { copy: copyToClipboard, isSupported: isClipboardSupported } = useClipboard()
 
   const activityChartData = shallowRef<ChartData<'bar'>>({ labels: [], datasets: [] })
   const activityChartOptions = shallowRef<ChartOptions<'bar'>>({})
@@ -533,13 +535,13 @@ export const useProfileWorkspace = () => {
       return
     }
 
-    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+    if (!isClipboardSupported.value) {
       errorMessage.value = 'Clipboard is not available in this browser.'
       return
     }
 
     try {
-      await navigator.clipboard.writeText(userId)
+      await copyToClipboard(userId)
       successMessage.value = 'User ID copied to clipboard.'
     } catch {
       errorMessage.value = 'Unable to copy User ID.'

@@ -69,7 +69,8 @@
 import OverviewDashboardPanel from '@/features/overview/components/OverviewDashboardPanel.vue'
 import OverviewToolbar from '@/features/overview/components/OverviewToolbar.vue'
 import { useOverviewStatistics } from '@/features/overview/composables/useOverviewStatistics'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useScroll } from '@vueuse/core'
+import { computed, onMounted, ref, shallowRef } from 'vue'
 
 const {
   selectedSubject,
@@ -104,9 +105,9 @@ const handleTagChange = (nextTag: string) => {
 }
 
 const pageRef = ref<HTMLElement | null>(null)
-const hasScrolled = ref(false)
-
-let scrollContainer: HTMLElement | null = null
+const scrollTarget = shallowRef<HTMLElement | Window>(window)
+const { y } = useScroll(scrollTarget)
+const hasScrolled = computed(() => y.value > 0)
 
 const isScrollableElement = (element: HTMLElement) => {
   const { overflowY } = window.getComputedStyle(element)
@@ -126,33 +127,7 @@ const resolveScrollContainer = (start: HTMLElement | null) => {
   return null
 }
 
-const updateToolbarShadow = () => {
-  if (scrollContainer) {
-    hasScrolled.value = scrollContainer.scrollTop > 0
-    return
-  }
-
-  hasScrolled.value = window.scrollY > 0
-}
-
 onMounted(() => {
-  scrollContainer = resolveScrollContainer(pageRef.value)
-
-  if (scrollContainer) {
-    scrollContainer.addEventListener('scroll', updateToolbarShadow, { passive: true })
-  } else {
-    window.addEventListener('scroll', updateToolbarShadow, { passive: true })
-  }
-
-  updateToolbarShadow()
-})
-
-onBeforeUnmount(() => {
-  if (scrollContainer) {
-    scrollContainer.removeEventListener('scroll', updateToolbarShadow)
-    return
-  }
-
-  window.removeEventListener('scroll', updateToolbarShadow)
+  scrollTarget.value = resolveScrollContainer(pageRef.value) ?? window
 })
 </script>
