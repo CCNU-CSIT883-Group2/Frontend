@@ -12,7 +12,7 @@
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div class="space-y-2">
         <div class="flex items-center gap-2">
-          <FloatLabel variant="on" class="w-full">
+          <FloatLabel variant="on" class="profile-account-floatlabel w-full">
             <InputText
               id="profile-name-edit"
               ref="nameInput"
@@ -24,7 +24,13 @@
               @keydown.enter.prevent="commitField('name')"
               @keydown.esc.prevent="cancelEdit('name')"
             />
-            <label for="profile-name-edit">Display name</label>
+            <label
+              for="profile-name-edit"
+              class="px-1"
+              style="background-color: var(--p-content-background)"
+            >
+              Display name
+            </label>
           </FloatLabel>
           <Button
             v-if="isEditingName"
@@ -54,7 +60,7 @@
 
       <div class="space-y-2">
         <div class="flex items-center gap-2">
-          <FloatLabel variant="on" class="w-full">
+          <FloatLabel variant="on" class="profile-account-floatlabel w-full">
             <InputText
               id="profile-email-edit"
               ref="emailInput"
@@ -67,7 +73,13 @@
               @keydown.enter.prevent="commitField('email')"
               @keydown.esc.prevent="cancelEdit('email')"
             />
-            <label for="profile-email-edit">Email address</label>
+            <label
+              for="profile-email-edit"
+              class="px-1"
+              style="background-color: var(--p-content-background)"
+            >
+              Email address
+            </label>
           </FloatLabel>
           <Button
             v-if="isEditingEmail"

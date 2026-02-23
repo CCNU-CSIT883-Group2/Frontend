@@ -1,3 +1,5 @@
+import axios from '@/axios'
+import type { Response } from '@/types'
 import { computed, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import { useDark } from '@vueuse/core'
@@ -10,7 +12,57 @@ interface UserState {
   role: string
 }
 
-type QuestionGenerateModel = 'ChatGPT' | 'Kimi'
+type QuestionGenerateModel = string
+
+interface ModelsData {
+  name: string
+  models: string[]
+}
+
+interface QuestionModelOption {
+  label: string
+  value: QuestionGenerateModel
+}
+
+const MODEL_LABEL_BY_CODE: Record<string, string> = {
+  C: 'ChatGPT',
+  K: 'Kimi',
+  D: 'Doubao',
+  T: 'Test',
+  G: 'GLM',
+}
+
+const MODEL_CODE_BY_ALIAS: Record<string, string> = {
+  C: 'C',
+  CHATGPT: 'C',
+  K: 'K',
+  KIMI: 'K',
+  D: 'D',
+  DOUBAO: 'D',
+  T: 'T',
+  TEST: 'T',
+  G: 'G',
+  GLM: 'G',
+}
+
+const DEFAULT_MODEL_OPTIONS: QuestionModelOption[] = [
+  { label: MODEL_LABEL_BY_CODE.C, value: 'C' },
+  { label: MODEL_LABEL_BY_CODE.K, value: 'K' },
+]
+
+const normalizeModelCode = (rawModel: string) => {
+  const normalized = rawModel.trim().toUpperCase()
+  if (!normalized) return ''
+  return MODEL_CODE_BY_ALIAS[normalized] ?? normalized
+}
+
+const toQuestionModelOption = (modelCode: string): QuestionModelOption => ({
+  value: modelCode,
+  label: MODEL_LABEL_BY_CODE[modelCode] ?? modelCode,
+})
+
+const normalizeModelCodes = (rawModels: string[]) =>
+  Array.from(new Set(rawModels.map(normalizeModelCode).filter(Boolean)))
 
 const STORAGE_KEYS = {
   name: 'username',
@@ -91,14 +143,87 @@ export const useUserStore = defineStore('user', () => {
 
 // Display preferences for question panels.
 export const useUserSettingsStore = defineStore('userSettings', () => {
+  const darkMode = useDark()
+  const availableModels = shallowRef<QuestionModelOption[]>([...DEFAULT_MODEL_OPTIONS])
+  const isLoadingModels = ref(false)
+  const hasLoadedModels = ref(false)
+
   const settings = ref({
-    darkMode: useDark(),
+    darkMode,
     questions: {
       showDifficulty: true,
       showTime: false,
-      generateModel: 'ChatGPT' as QuestionGenerateModel,
+      generateModel: 'C' as QuestionGenerateModel,
     },
   })
 
-  return { settings }
+  const setDarkMode = (next: boolean) => {
+    if (darkMode.value === next) return
+    darkMode.value = next
+  }
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode.value)
+  }
+
+  const ensureSelectedModel = () => {
+    const selectedModel = normalizeModelCode(settings.value.questions.generateModel)
+    const availableModelSet = new Set(availableModels.value.map((option) => option.value))
+
+    if (selectedModel && availableModelSet.has(selectedModel)) {
+      settings.value.questions.generateModel = selectedModel
+      return
+    }
+
+    settings.value.questions.generateModel = availableModels.value[0]?.value ?? 'C'
+  }
+
+  const setAvailableModels = (rawModels: string[]) => {
+    const modelCodes = normalizeModelCodes(rawModels)
+
+    if (modelCodes.length > 0) {
+      availableModels.value = modelCodes.map(toQuestionModelOption)
+      hasLoadedModels.value = true
+      ensureSelectedModel()
+      return
+    }
+
+    availableModels.value = [...DEFAULT_MODEL_OPTIONS]
+    hasLoadedModels.value = false
+    ensureSelectedModel()
+  }
+
+  const loadAvailableModels = async (force = false) => {
+    if (isLoadingModels.value) return
+    if (hasLoadedModels.value && !force) {
+      ensureSelectedModel()
+      return
+    }
+
+    isLoadingModels.value = true
+
+    try {
+      const response = await axios.get<Response<ModelsData>>('/models')
+      const modelCodes = normalizeModelCodes(response.data.data?.models ?? [])
+      availableModels.value =
+        modelCodes.length > 0 ? modelCodes.map(toQuestionModelOption) : [...DEFAULT_MODEL_OPTIONS]
+      hasLoadedModels.value = true
+      ensureSelectedModel()
+    } catch {
+      ensureSelectedModel()
+    } finally {
+      isLoadingModels.value = false
+    }
+  }
+
+  return {
+    settings,
+    darkMode,
+    availableModels,
+    isLoadingModels,
+    setDarkMode,
+    toggleDarkMode,
+    setAvailableModels,
+    loadAvailableModels,
+  }
 })

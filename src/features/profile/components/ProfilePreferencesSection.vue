@@ -17,7 +17,7 @@
           <div class="text-sm font-medium text-surface-800 dark:text-surface-100">Dark mode</div>
           <div class="text-xs text-surface-500 dark:text-surface-300">Toggle application theme</div>
         </div>
-        <ToggleSwitch v-model="settings.darkMode" />
+        <ToggleSwitch :model-value="darkMode" @update:model-value="userSettingsStore.setDarkMode" />
       </div>
 
       <div
@@ -57,6 +57,10 @@
         <Select
           v-model="settings.questions.generateModel"
           :options="availableModels"
+          option-label="label"
+          option-value="value"
+          :loading="isLoadingModels"
+          placeholder="Select a model"
           class="w-full"
         />
       </div>
@@ -69,8 +73,12 @@ import { useUserSettingsStore } from '@/stores/userStore'
 import { storeToRefs } from 'pinia'
 import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
+import { onMounted } from 'vue'
 
-const { settings } = storeToRefs(useUserSettingsStore())
+const userSettingsStore = useUserSettingsStore()
+const { settings, darkMode, availableModels, isLoadingModels } = storeToRefs(userSettingsStore)
 
-const availableModels = ['ChatGPT', 'Kimi']
+onMounted(() => {
+  void userSettingsStore.loadAvailableModels()
+})
 </script>

@@ -66,11 +66,13 @@ export interface User {
   password: string
   email: string
   role: string
+  models?: string[]
 }
 
 export interface LoginData {
   token: string
   user: User
+  models?: string[]
 }
 
 export interface RegisterResponse {

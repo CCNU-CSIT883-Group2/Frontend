@@ -20,32 +20,84 @@
       </div>
 
       <div class="flex items-center gap-4 mr-3">
-        <AppHeaderActionButton :icon="isDark ? 'sun' : 'moon'" @click="toggleDark()" />
+        <AppHeaderActionButton
+          :icon="darkMode ? 'sun' : 'moon'"
+          @click="userSettingsStore.toggleDarkMode()"
+        />
         <AppHeaderActionButton icon="cog" @click="isSettingsVisible = true" />
         <AppHeaderActionButton :to="ROUTE_NAMES.profile" icon="users" />
       </div>
 
-      <Dialog v-model:visible="isSettingsVisible" class="flex" header="Settings" :modal="true">
-        <div class="flex gap-4 flex-col w-80">
-          <div class="flex justify-between">
-            <span>Dark Mode: </span>
-            <ToggleSwitch v-model="settings.darkMode" />
+      <Dialog
+        v-model:visible="isSettingsVisible"
+        header="Settings"
+        :modal="true"
+        :style="{ width: '48rem', maxWidth: 'calc(100vw - 2rem)' }"
+      >
+        <p class="mb-4 text-sm text-surface-500 dark:text-surface-300">
+          These options apply instantly to your current session.
+        </p>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div
+            class="flex items-center justify-between rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
+          >
+            <div>
+              <div class="text-sm font-medium text-surface-800 dark:text-surface-100">
+                Dark mode
+              </div>
+              <div class="text-xs text-surface-500 dark:text-surface-300">
+                Toggle application theme
+              </div>
+            </div>
+            <ToggleSwitch
+              :model-value="darkMode"
+              @update:model-value="userSettingsStore.setDarkMode"
+            />
           </div>
-          <div class="flex justify-between">
-            <span>Show Difficulty: </span>
+
+          <div
+            class="flex items-center justify-between rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
+          >
+            <div>
+              <div class="text-sm font-medium text-surface-800 dark:text-surface-100">
+                Show difficulty
+              </div>
+              <div class="text-xs text-surface-500 dark:text-surface-300">
+                Display question difficulty tags
+              </div>
+            </div>
             <ToggleSwitch v-model="settings.questions.showDifficulty" />
           </div>
-          <div class="flex justify-between">
-            <span>Show Time: </span>
+
+          <div
+            class="flex items-center justify-between rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
+          >
+            <div>
+              <div class="text-sm font-medium text-surface-800 dark:text-surface-100">
+                Show time hint
+              </div>
+              <div class="text-xs text-surface-500 dark:text-surface-300">
+                Display estimated answer time
+              </div>
+            </div>
             <ToggleSwitch v-model="settings.questions.showTime" />
           </div>
-          <div class="flex justify-between items-center">
-            <span>Generate Model: </span>
+
+          <div
+            class="rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 dark:border-surface-700 dark:bg-surface-800/40"
+          >
+            <div class="mb-2 text-sm font-medium text-surface-800 dark:text-surface-100">
+              Question model
+            </div>
             <Select
               v-model="settings.questions.generateModel"
               :options="availableModels"
-              class="w-36"
-              size="small"
+              option-label="label"
+              option-value="value"
+              :loading="isLoadingModels"
+              placeholder="Select a model"
+              class="w-full"
             />
           </div>
         </div>
@@ -58,21 +110,20 @@
 import AppHeaderActionButton from '@/features/layout/components/AppHeaderActionButton.vue'
 import { ROUTE_NAMES } from '@/router'
 import { useUserSettingsStore } from '@/stores/userStore'
-import { useDark, useToggle } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 const navigationActions = [
   { icon: 'pencil', to: ROUTE_NAMES.questions },
   { icon: 'chart-bar', to: ROUTE_NAMES.overview },
 ] as const
 
-const availableModels: string[] = ['ChatGPT', 'Kimi']
-
-const isDark = useDark()
-const toggleDark = useToggle(isDark)
-
 const isSettingsVisible = ref(false)
 
-const { settings } = storeToRefs(useUserSettingsStore())
+const userSettingsStore = useUserSettingsStore()
+const { settings, darkMode, availableModels, isLoadingModels } = storeToRefs(userSettingsStore)
+
+onMounted(() => {
+  void userSettingsStore.loadAvailableModels()
+})
 </script>

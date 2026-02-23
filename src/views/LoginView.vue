@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import axios from '@/axios'
 import { ROUTE_NAMES } from '@/router'
-import { useUserStore } from '@/stores/userStore'
+import { useUserSettingsStore, useUserStore } from '@/stores/userStore'
 import type { LoginData, Response } from '@/types'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -96,6 +96,7 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 
 const userStore = useUserStore()
+const userSettingsStore = useUserSettingsStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -145,6 +146,13 @@ const handleLogin = async () => {
       email: loginData.user.email,
       role: loginData.user.role,
     })
+
+    const loginModels = Array.isArray(loginData.models)
+      ? loginData.models
+      : Array.isArray(loginData.user.models)
+        ? loginData.user.models
+        : []
+    userSettingsStore.setAvailableModels(loginModels)
 
     await router.push(getRedirectPath())
   } catch (error) {

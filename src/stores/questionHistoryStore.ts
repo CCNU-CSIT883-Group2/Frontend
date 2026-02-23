@@ -13,11 +13,6 @@ import type {
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 
-const modelCodeByName: Record<string, string> = {
-  ChatGPT: 'C',
-  Kimi: 'K',
-}
-
 const DEFAULT_PROGRESS: QuestionsCreateProgressState = {
   total: 0,
   current: 0,
@@ -42,7 +37,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     Array.from(new Set(histories.value.map((history) => history.tag))).sort(),
   )
 
-  const { name: username, token } = storeToRefs(useUserStore())
+  const { token } = storeToRefs(useUserStore())
   const { settings } = storeToRefs(useUserSettingsStore())
 
   const setCreateProgress = (patch: Partial<QuestionsCreateProgressState>) => {
@@ -86,12 +81,11 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     number: number,
     type: string,
   ): CreateQuestionRequest => ({
-    name: username.value,
     subject,
     tag,
     number,
     type,
-    model: modelCodeByName[settings.value.questions.generateModel] ?? 'C',
+    model: settings.value.questions.generateModel || 'C',
   })
 
   const applyCreateDonePayload = (payload: QuestionsCreateStreamDonePayload) => {
@@ -130,9 +124,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     isFetching.value = true
 
     try {
-      const response = await axios.get<Response<History[]>>('/history', {
-        params: { username: username.value },
-      })
+      const response = await axios.get<Response<History[]>>('/history')
       histories.value = response.data.data ?? []
       return null
     } catch (error) {
@@ -194,7 +186,6 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     try {
       await axios.delete<Response<undefined>>('/history', {
         data: {
-          username: username.value,
           history_id: historyId,
         },
       })
