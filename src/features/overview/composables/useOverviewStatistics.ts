@@ -1,66 +1,58 @@
-import axios from '@/axios'
 import {
-  buildOverviewDashboardMockData,
-  buildOverviewSubjectDashboardMockData,
-} from '@/features/overview/mocks/overviewDashboardMock'
+  fetchOverviewDashboardData,
+  fetchOverviewSubjectDashboardData,
+} from '@/features/overview/composables/overviewStatistics.api'
+import {
+  buildAccuracyTrendChart,
+  buildAttemptsStackedChart,
+  buildDistributionChart,
+  buildSubjectAccuracyChart,
+} from '@/features/overview/composables/overviewStatistics.charts'
+import {
+  buildOverviewInsights,
+  buildOverviewKpiCards,
+  type OverviewInsight,
+  type OverviewKpiCard,
+  type RankingSummary,
+} from '@/features/overview/composables/overviewStatistics.presentation'
+import {
+  buildSubjectRankContext,
+  buildSubjectRankingSummary,
+  buildUniqueNonEmptyStrings,
+  buildWeeklyGoalState,
+  pickMostPracticedSubject,
+  resolveActiveTag,
+} from '@/features/overview/composables/overviewStatistics.state'
+import { shareOverviewStatistics } from '@/features/overview/composables/overviewStatistics.share'
+import { useOverviewRouteSync } from '@/features/overview/composables/useOverviewRouteSync'
+import {
+  DEFAULT_WEEKLY_ATTEMPT_GOAL,
+  buildStatisticsDataFromDailyOverview,
+  buildStatisticsDataFromOverview,
+  buildStatisticsDataFromSubjectDetail,
+  buildSubjectPerformanceFromOverview,
+  buildSubjectPerformanceFromTags,
+  formatDateLabel,
+  formatDateTimeLabel,
+  getSubjectFromQuery,
+  getTagFromQuery,
+  getTimeZoneFromQuery,
+  getWeekStartFromQuery,
+  type SubjectPerformance,
+} from '@/features/overview/composables/overviewStatistics.helpers'
 import { ROUTE_NAMES } from '@/router'
 import type {
   DailyStatistics,
-  OverviewDashboardData,
   OverviewSubjectDashboardData,
-  OverviewTagData,
-  Response,
   StatisticsData,
 } from '@/types'
 import type { ChartData, ChartOptions } from 'chart.js'
-import { useClipboard, watchIgnorable } from '@vueuse/core'
-import { computed, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue'
+import { useClipboard } from '@vueuse/core'
+import { computed, ref, shallowRef, type ComputedRef, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-const CHART_SERIES_COLORS = ['#60A5FA', '#22D3EE', '#34D399', '#FBBF24', '#FB923C', '#A78BFA'] as const
-const CHART_SERIES_HOVER_COLORS = ['#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#F97316', '#8B5CF6'] as const
-const TREND_LINE_COLOR = '#3B82F6'
-const TREND_FILL_COLOR = 'rgba(59, 130, 246, 0.16)'
-const CORRECT_BAR_COLOR = '#10B981'
-const INCORRECT_BAR_COLOR = '#F59E0B'
-const DEFAULT_WEEKLY_ATTEMPT_GOAL = 120
 const USE_OVERVIEW_DASHBOARD_MOCK = import.meta.env.VITE_OVERVIEW_USE_MOCK === 'true'
-
-interface SubjectPerformance {
-  subject: string
-  totalAttempts: number
-  correctAttempts: number
-  accuracyRate: number
-}
-
-interface RankingSummary {
-  total_attempts: number
-  correct_attempts: number
-  accuracy_rate: number
-  weekly_goal: number
-  weekly_goal_progress: number
-  subject_rank?: number
-  active_subject_count?: number
-  tag_rank?: number
-  tag_count?: number
-}
-
-export interface OverviewKpiCard {
-  id: string
-  label: string
-  value: string
-  helper: string
-  icon: string
-  tone: 'positive' | 'neutral' | 'warning'
-}
-
-export interface OverviewInsight {
-  id: string
-  title: string
-  description: string
-  icon: string
-  tone: 'positive' | 'neutral' | 'warning'
-}
+export type { OverviewInsight, OverviewKpiCard } from '@/features/overview/composables/overviewStatistics.presentation'
 
 interface UseOverviewStatisticsResult {
   selectedSubject: Ref<string>
@@ -88,208 +80,6 @@ interface UseOverviewStatisticsResult {
   distributionChartData: Ref<ChartData<'doughnut', number[], string>>
   distributionChartOptions: Ref<ChartOptions<'doughnut'>>
   shareCurrentStatistics: () => Promise<void>
-}
-
-const getSubjectFromQuery = (query: Record<string, unknown>) =>
-  typeof query.subject === 'string' ? query.subject : ''
-
-const getWeekStartFromQuery = (query: Record<string, unknown>) =>
-  typeof query.week_start === 'string' ? query.week_start : ''
-
-const getTimeZoneFromQuery = (query: Record<string, unknown>) =>
-  typeof query.tz === 'string' ? query.tz : ''
-
-const getTagFromQuery = (query: Record<string, unknown>) =>
-  typeof query.tag === 'string' ? query.tag : ''
-
-const parseDate = (value: string) => {
-  const normalized = value.includes('T') ? value : `${value}T00:00:00`
-  const date = new Date(normalized)
-
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-const formatDayLabel = (value: string) => {
-  const date = parseDate(value)
-  if (!date) return value
-
-  return date.toLocaleDateString(undefined, { weekday: 'short' })
-}
-
-const formatDateLabel = (value: string) => {
-  const date = parseDate(value)
-  if (!date) return value
-
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-
-const formatDateTimeLabel = (value: string) => {
-  const date = parseDate(value)
-  if (!date) return value
-
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-const formatRate = (value: number, digits = 1) => `${value.toFixed(digits)}%`
-
-const normalizeRate = (rate: number) => (rate > 1 ? rate / 100 : rate)
-
-const normalizeProgressPercent = (progress: number) => (progress <= 1 ? progress * 100 : progress)
-
-const calculateConsecutiveActiveDays = (dailyStatistics: DailyStatistics[]) => {
-  let streak = 0
-
-  for (let index = dailyStatistics.length - 1; index >= 0; index -= 1) {
-    if (dailyStatistics[index].total_attempts > 0) {
-      streak += 1
-      continue
-    }
-
-    if (streak > 0) {
-      break
-    }
-  }
-
-  return streak
-}
-
-const buildStatisticsDataFromDailyOverview = (
-  latestTime: string,
-  startOfWeek: string,
-  endOfWeek: string,
-  dailyOverview: Array<{
-    date: string
-    total_attempts: number
-    correct_attempts: number
-    accuracy_rate: number
-  }>,
-): StatisticsData => ({
-  latest_time: latestTime,
-  start_of_week: startOfWeek,
-  end_of_week: endOfWeek,
-  daily_statistics: dailyOverview.map((entry) => ({
-    date: entry.date,
-    total_attempts: entry.total_attempts,
-    correct_attempts: entry.correct_attempts,
-    correct_rate: normalizeRate(entry.accuracy_rate),
-    questions_on_date: [],
-  })),
-})
-
-const buildStatisticsDataFromOverview = (overview: OverviewDashboardData): StatisticsData =>
-  buildStatisticsDataFromDailyOverview(
-    overview.latest_time,
-    overview.start_of_week,
-    overview.end_of_week,
-    overview.daily_overview,
-  )
-
-const buildSubjectPerformanceFromOverview = (
-  subjects: string[],
-  subjectOverview: OverviewDashboardData['subject_overview'],
-): SubjectPerformance[] => {
-  const performanceMap = new Map(
-    subjectOverview.map((entry) => [
-      entry.subject,
-      {
-        subject: entry.subject,
-        totalAttempts: entry.total_attempts,
-        correctAttempts: entry.correct_attempts,
-        accuracyRate: normalizeRate(entry.accuracy_rate) * 100,
-      },
-    ]),
-  )
-
-  return subjects.map((subject) => {
-    const performance = performanceMap.get(subject)
-    if (performance) {
-      return performance
-    }
-
-    return {
-      subject,
-      totalAttempts: 0,
-      correctAttempts: 0,
-      accuracyRate: 0,
-    }
-  })
-}
-
-const buildStatisticsDataFromSubjectDetail = (
-  subjectDetail: OverviewSubjectDashboardData,
-  focusTag: string,
-): StatisticsData => {
-  const hasTagDaily = subjectDetail.daily_tag_overview.length > 0 && focusTag.length > 0
-
-  if (!hasTagDaily) {
-    return buildStatisticsDataFromDailyOverview(
-      subjectDetail.latest_time,
-      subjectDetail.start_of_week,
-      subjectDetail.end_of_week,
-      subjectDetail.daily_overview,
-    )
-  }
-
-  const dailyOverview = subjectDetail.daily_tag_overview.map((day) => {
-    const selectedTag = day.tags.find((tag) => tag.tag === focusTag)
-    const totalAttempts = selectedTag?.total_attempts ?? 0
-    const correctAttempts = selectedTag?.correct_attempts ?? 0
-
-    return {
-      date: day.date,
-      total_attempts: totalAttempts,
-      correct_attempts: correctAttempts,
-      accuracy_rate:
-        typeof selectedTag?.accuracy_rate === 'number'
-          ? selectedTag.accuracy_rate
-          : totalAttempts > 0
-            ? correctAttempts / totalAttempts
-            : 0,
-    }
-  })
-
-  return buildStatisticsDataFromDailyOverview(
-    subjectDetail.latest_time,
-    subjectDetail.start_of_week,
-    subjectDetail.end_of_week,
-    dailyOverview,
-  )
-}
-
-const buildSubjectPerformanceFromTags = (tagOverview: OverviewTagData[]): SubjectPerformance[] =>
-  tagOverview.map((entry) => ({
-    subject: entry.tag,
-    totalAttempts: entry.total_attempts,
-    correctAttempts: entry.correct_attempts,
-    accuracyRate: normalizeRate(entry.accuracy_rate) * 100,
-  }))
-
-const buildRequestParams = (
-  routeQuery: Record<string, unknown>,
-  selectedSubject?: string,
-  selectedTag?: string,
-): Record<string, string> => {
-  const queryWeekStart = typeof routeQuery.week_start === 'string' ? routeQuery.week_start : undefined
-  const queryTz = typeof routeQuery.tz === 'string' ? routeQuery.tz : undefined
-  const timeZone = queryTz || Intl.DateTimeFormat().resolvedOptions().timeZone
-
-  const params: Record<string, string> = { tz: timeZone }
-  if (queryWeekStart) {
-    params.week_start = queryWeekStart
-  }
-  if (selectedSubject) {
-    params.subject = selectedSubject
-  }
-  if (selectedTag) {
-    params.tag = selectedTag
-  }
-
-  return params
 }
 
 export function useOverviewStatistics(): UseOverviewStatisticsResult {
@@ -327,8 +117,9 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   })
   const distributionChartOptions = shallowRef<ChartOptions<'doughnut'>>({})
 
-  const routeWeekStart = computed(() => getWeekStartFromQuery(route.query))
-  const routeTimeZone = computed(() => getTimeZoneFromQuery(route.query))
+  const routeQuery = computed(() => route.query as Record<string, unknown>)
+  const routeWeekStart = computed(() => getWeekStartFromQuery(routeQuery.value))
+  const routeTimeZone = computed(() => getTimeZoneFromQuery(routeQuery.value))
   const isMockMode = computed(
     () => USE_OVERVIEW_DASHBOARD_MOCK || route.query.mock === '1' || route.query.mock === 'true',
   )
@@ -391,217 +182,27 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   }
 
   const updateAccuracyTrendChart = (subject: string, dailyStatistics: DailyStatistics[]) => {
-    accuracyTrendChartData.value = {
-      labels: dailyStatistics.map((entry) => formatDayLabel(entry.date)),
-      datasets: [
-        {
-          label: 'Accuracy',
-          data: dailyStatistics.map((entry) => Number((entry.correct_rate * 100).toFixed(1))),
-          borderColor: TREND_LINE_COLOR,
-          backgroundColor: TREND_FILL_COLOR,
-          fill: true,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0.35,
-        },
-      ],
-    }
-
-    accuracyTrendChartOptions.value = {
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          callbacks: {
-            label: (context) => `Accuracy ${context.parsed.y}%`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          title: {
-            display: true,
-            text: `${subject} · Weekly Accuracy`,
-            font: {
-              size: 13,
-              weight: 'bold',
-            },
-          },
-        },
-        y: {
-          grid: {
-            color: 'rgba(148, 163, 184, 0.25)',
-          },
-          title: {
-            display: true,
-            text: 'Accuracy (%)',
-          },
-          min: 0,
-          max: 100,
-          ticks: {
-            callback: (value) => `${value}%`,
-          },
-        },
-      },
-    }
+    const chart = buildAccuracyTrendChart(subject, dailyStatistics)
+    accuracyTrendChartData.value = chart.data
+    accuracyTrendChartOptions.value = chart.options
   }
 
   const updateAttemptsStackedChart = (dailyStatistics: DailyStatistics[]) => {
-    attemptsStackedChartData.value = {
-      labels: dailyStatistics.map((entry) => formatDayLabel(entry.date)),
-      datasets: [
-        {
-          label: 'Correct',
-          data: dailyStatistics.map((entry) => entry.correct_attempts),
-          backgroundColor: CORRECT_BAR_COLOR,
-          borderRadius: 8,
-        },
-        {
-          label: 'Incorrect',
-          data: dailyStatistics.map((entry) => Math.max(entry.total_attempts - entry.correct_attempts, 0)),
-          backgroundColor: INCORRECT_BAR_COLOR,
-          borderRadius: 8,
-        },
-      ],
-    }
-
-    attemptsStackedChartOptions.value = {
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          position: 'bottom',
-        },
-      },
-      scales: {
-        x: {
-          stacked: true,
-          grid: {
-            display: false,
-          },
-          title: {
-            display: true,
-            text: 'Day',
-          },
-        },
-        y: {
-          stacked: true,
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(148, 163, 184, 0.25)',
-          },
-          title: {
-            display: true,
-            text: 'Attempts',
-          },
-        },
-      },
-    }
+    const chart = buildAttemptsStackedChart(dailyStatistics)
+    attemptsStackedChartData.value = chart.data
+    attemptsStackedChartOptions.value = chart.options
   }
 
   const updateSubjectAccuracyChart = (subjectPerformances: SubjectPerformance[]) => {
-    const sortedPerformances = [...subjectPerformances].sort(
-      (left, right) => right.accuracyRate - left.accuracyRate,
-    )
-
-    subjectAccuracyChartData.value = {
-      labels: sortedPerformances.map((entry) => entry.subject),
-      datasets: [
-        {
-          label: 'Accuracy',
-          data: sortedPerformances.map((entry) => Number(entry.accuracyRate.toFixed(1))),
-          backgroundColor: sortedPerformances.map(
-            (_, index) => CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length],
-          ),
-          borderRadius: 10,
-        },
-      ],
-    }
-
-    subjectAccuracyChartOptions.value = {
-      maintainAspectRatio: false,
-      indexAxis: 'y',
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          callbacks: {
-            label: (context) => `Accuracy ${context.parsed.x}%`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          min: 0,
-          max: 100,
-          grid: {
-            color: 'rgba(148, 163, 184, 0.25)',
-          },
-          ticks: {
-            callback: (value) => `${value}%`,
-          },
-          title: {
-            display: true,
-            text: 'Accuracy (%)',
-          },
-        },
-        y: {
-          grid: {
-            display: false,
-          },
-        },
-      },
-    }
+    const chart = buildSubjectAccuracyChart(subjectPerformances)
+    subjectAccuracyChartData.value = chart.data
+    subjectAccuracyChartOptions.value = chart.options
   }
 
   const updateDistributionChart = (subjectPerformances: SubjectPerformance[]) => {
-    const labels = subjectPerformances.map((entry) => entry.subject)
-    const totalAttempts = subjectPerformances.reduce((sum, item) => sum + item.totalAttempts, 0)
-
-    const percentages = subjectPerformances.map((entry) =>
-      totalAttempts > 0 ? (entry.totalAttempts / totalAttempts) * 100 : 0,
-    )
-
-    distributionChartData.value = {
-      labels,
-      datasets: [
-        {
-          label: 'Attempts (%)',
-          data: percentages,
-          backgroundColor: labels.map(
-            (_, index) => CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length],
-          ),
-          hoverBackgroundColor: labels.map(
-            (_, index) => CHART_SERIES_HOVER_COLORS[index % CHART_SERIES_HOVER_COLORS.length],
-          ),
-          borderWidth: 0,
-        },
-      ],
-    }
-
-    distributionChartOptions.value = {
-      maintainAspectRatio: false,
-      cutout: '68%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-        },
-        tooltip: {
-          callbacks: {
-            label: (context) => `${context.label}: ${context.parsed.toFixed(1)}%`,
-          },
-        },
-      },
-    }
+    const chart = buildDistributionChart(subjectPerformances)
+    distributionChartData.value = chart.data
+    distributionChartOptions.value = chart.options
   }
 
   const updateKpiCards = (
@@ -616,165 +217,21 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
       rankTone?: OverviewKpiCard['tone']
     },
   ) => {
-    const selectedPerformance = subjectPerformances.find(
-      (performance) => performance.subject === selectedSubjectValue,
-    )
-
-    const practicedDays = selectedStatistics.value
-      ? selectedStatistics.value.daily_statistics.filter((entry) => entry.total_attempts > 0).length
-      : 0
-    const totalDays = selectedStatistics.value?.daily_statistics.length ?? 0
-    const streakDays = selectedStatistics.value
-      ? calculateConsecutiveActiveDays(selectedStatistics.value.daily_statistics)
-      : 0
-
-    const rankedSubjects = [...subjectPerformances]
-      .filter((entry) => entry.totalAttempts > 0)
-      .sort((left, right) => right.accuracyRate - left.accuracyRate)
-
-    const selectedRank =
-      summary?.subject_rank ??
-      summary?.tag_rank ??
-      rankedSubjects.findIndex((entry) => entry.subject === selectedSubjectValue) + 1
-    const activeSubjectCount = summary?.tag_count ?? summary?.active_subject_count ?? rankedSubjects.length
-    const rankLabel = options?.rankLabel ?? 'Subject Ranking'
-    const rankUnitLabel = options?.rankUnitLabel ?? 'subjects'
-    const defaultRankValue = selectedRank > 0 ? `#${selectedRank}` : '--'
-    const defaultRankHelper =
-      selectedRank > 0
-        ? `Among ${activeSubjectCount} active ${rankUnitLabel} · ${streakDays} day streak`
-        : `${streakDays} day streak`
-    const defaultRankTone: OverviewKpiCard['tone'] =
-      selectedRank > 0 && selectedRank <= 2 ? 'positive' : 'neutral'
-
-    const target = summary?.weekly_goal ?? DEFAULT_WEEKLY_ATTEMPT_GOAL
-    const completed = summary?.total_attempts ?? selectedPerformance?.totalAttempts ?? 0
-
-    const accuracyValue = summary
-      ? normalizeRate(summary.accuracy_rate) * 100
-      : selectedPerformance?.accuracyRate ?? 0
-    const correctCount = summary?.correct_attempts ?? selectedPerformance?.correctAttempts ?? 0
-
-    kpiCards.value = [
-      {
-        id: 'accuracy',
-        label: 'Accuracy',
-        value: formatRate(accuracyValue),
-        helper: completed > 0 ? `${correctCount}/${completed} correct` : 'No attempts this week',
-        icon: 'pi pi-chart-line',
-        tone: accuracyValue >= 70 ? 'positive' : 'warning',
-      },
-      {
-        id: 'attempts',
-        label: 'Attempts',
-        value: `${completed}`,
-        helper: `Target ${target}/week`,
-        icon: 'pi pi-check-square',
-        tone: completed >= target ? 'positive' : 'neutral',
-      },
-      {
-        id: 'active-days',
-        label: 'Active Days',
-        value: `${practicedDays}/${totalDays || 7}`,
-        helper: practicedDays >= 5 ? 'Consistency is solid' : 'Add 1-2 extra sessions',
-        icon: 'pi pi-calendar',
-        tone: practicedDays >= 5 ? 'positive' : 'neutral',
-      },
-      {
-        id: 'ranking',
-        label: rankLabel,
-        value: options?.rankValue ?? defaultRankValue,
-        helper: options?.rankHelper ?? defaultRankHelper,
-        icon: 'pi pi-trophy',
-        tone: options?.rankTone ?? defaultRankTone,
-      },
-    ]
+    kpiCards.value = buildOverviewKpiCards({
+      selectedSubject: selectedSubjectValue,
+      subjectPerformances,
+      selectedStatistics: selectedStatistics.value,
+      summary,
+      options,
+    })
   }
 
   const updateInsights = (selectedSubjectValue: string, subjectPerformances: SubjectPerformance[]) => {
-    if (!selectedStatistics.value) {
-      insights.value = []
-      return
-    }
-
-    const selectedDailyStatistics = selectedStatistics.value.daily_statistics
-    const sortedByAttempts = [...selectedDailyStatistics].sort(
-      (left, right) => right.total_attempts - left.total_attempts,
-    )
-    const sortedByAccuracy = [...selectedDailyStatistics]
-      .filter((entry) => entry.total_attempts > 0)
-      .sort((left, right) => left.correct_rate - right.correct_rate)
-    const topSubjectByAttempts = [...subjectPerformances].sort(
-      (left, right) => right.totalAttempts - left.totalAttempts,
-    )[0]
-
-    const insightsPayload: OverviewInsight[] = []
-
-    if (sortedByAttempts[0]?.total_attempts > 0) {
-      insightsPayload.push({
-        id: 'peak-day',
-        title: 'Peak Study Day',
-        description: `${formatDateLabel(sortedByAttempts[0].date)} reached ${sortedByAttempts[0].total_attempts} attempts for ${selectedSubjectValue}.`,
-        icon: 'pi pi-bolt',
-        tone: 'positive',
-      })
-    }
-
-    if (sortedByAccuracy[0]) {
-      insightsPayload.push({
-        id: 'weak-day',
-        title: 'Most Challenging Day',
-        description: `${formatDateLabel(sortedByAccuracy[0].date)} accuracy dropped to ${formatRate(sortedByAccuracy[0].correct_rate * 100)}. Consider a short review.`,
-        icon: 'pi pi-exclamation-triangle',
-        tone: 'warning',
-      })
-    }
-
-    if (topSubjectByAttempts) {
-      insightsPayload.push({
-        id: 'focus-subject',
-        title: 'Current Focus',
-        description: `${topSubjectByAttempts.subject} has the highest workload (${topSubjectByAttempts.totalAttempts} attempts).`,
-        icon: 'pi pi-compass',
-        tone: 'neutral',
-      })
-    }
-
-    if (insightsPayload.length === 0) {
-      insightsPayload.push({
-        id: 'empty',
-        title: 'No Attempts Yet',
-        description: `Start practicing ${selectedSubjectValue} to unlock trend insights and suggestions.`,
-        icon: 'pi pi-lightbulb',
-        tone: 'neutral',
-      })
-    }
-
-    insights.value = insightsPayload
-  }
-
-  const fetchOverviewDashboard = async () => {
-    if (isMockMode.value) {
-      return buildOverviewDashboardMockData(subjects.value)
-    }
-
-    const response = await axios.get<Response<OverviewDashboardData>>('/dashboard/overview', {
-      params: buildRequestParams(route.query),
+    insights.value = buildOverviewInsights({
+      selectedSubjectLabel: selectedSubjectValue,
+      selectedStatistics: selectedStatistics.value,
+      subjectPerformances,
     })
-
-    return response.data.data
-  }
-
-  const fetchOverviewSubjectDashboard = async (subject: string) => {
-    if (isMockMode.value) {
-      return buildOverviewSubjectDashboardMockData(subject, subjects.value)
-    }
-
-    const response = await axios.get<Response<OverviewSubjectDashboardData>>('/dashboard/overview/subject', {
-      params: buildRequestParams(route.query, subject, getTagFromQuery(route.query)),
-    })
-
-    return response.data.data
   }
 
   const refreshCharts = async () => {
@@ -783,36 +240,30 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
     errorMessage.value = ''
 
     try {
-      const overviewData = await fetchOverviewDashboard()
+      const overviewData = await fetchOverviewDashboardData({
+        isMockMode: isMockMode.value,
+        subjects: subjects.value,
+        routeQuery: routeQuery.value,
+      })
 
       if (requestId !== latestRequestId.value) {
         return
       }
 
-      const globalWeeklyGoalTarget = overviewData.summary.weekly_goal ?? DEFAULT_WEEKLY_ATTEMPT_GOAL
-      const globalWeeklyGoalCompleted = overviewData.summary.total_attempts ?? 0
-      const globalWeeklyGoalProgress =
-        typeof overviewData.summary.weekly_goal_progress === 'number'
-          ? normalizeProgressPercent(overviewData.summary.weekly_goal_progress)
-          : globalWeeklyGoalTarget > 0
-            ? (globalWeeklyGoalCompleted / globalWeeklyGoalTarget) * 100
-            : 0
+      const weeklyGoalState = buildWeeklyGoalState(overviewData.summary)
+      weeklyGoalTarget.value = weeklyGoalState.target
+      weeklyGoalCompleted.value = weeklyGoalState.completed
+      weeklyGoalProgress.value = weeklyGoalState.progress
 
-      weeklyGoalTarget.value = globalWeeklyGoalTarget
-      weeklyGoalCompleted.value = globalWeeklyGoalCompleted
-      weeklyGoalProgress.value = Math.min(100, Number(globalWeeklyGoalProgress.toFixed(1)))
-
-      const nextSubjects = Array.from(
-        new Set(overviewData.subject_overview.map((entry) => entry.subject).filter((subject) => subject.length > 0)),
+      const nextSubjects = buildUniqueNonEmptyStrings(
+        overviewData.subject_overview.map((entry) => entry.subject),
       )
       subjects.value = nextSubjects
       const subjectPerformances = buildSubjectPerformanceFromOverview(nextSubjects, overviewData.subject_overview)
-      const rankedSubjects = [...subjectPerformances]
-        .filter((entry) => entry.totalAttempts > 0)
-        .sort((left, right) => right.accuracyRate - left.accuracyRate)
-      const selectedSubjectRank =
-        rankedSubjects.findIndex((entry) => entry.subject === selectedSubject.value) + 1
-      const activeSubjectCount = rankedSubjects.length
+      const { selectedSubjectRank, activeSubjectCount } = buildSubjectRankContext(
+        subjectPerformances,
+        selectedSubject.value,
+      )
 
       const hasActiveSubject =
         selectedSubject.value.length > 0 && nextSubjects.includes(selectedSubject.value)
@@ -828,9 +279,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
         selectedTag.value = ''
         selectedStatistics.value = buildStatisticsDataFromOverview(overviewData)
         const focusSubject = overviewData.focus_subject || subjectPerformances[0]?.subject || 'All Subjects'
-        const mostPracticedSubject = [...subjectPerformances].sort(
-          (left, right) => right.totalAttempts - left.totalAttempts,
-        )[0]
+        const mostPracticedSubject = pickMostPracticedSubject(subjectPerformances)
 
         updateAccuracyTrendChart('All Subjects', selectedStatistics.value.daily_statistics)
         updateAttemptsStackedChart(selectedStatistics.value.daily_statistics)
@@ -848,22 +297,28 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
         return
       }
 
-      const subjectDetail = await fetchOverviewSubjectDashboard(selectedSubject.value)
+      const subjectDetail = await fetchOverviewSubjectDashboardData({
+        isMockMode: isMockMode.value,
+        subject: selectedSubject.value,
+        subjects: subjects.value,
+        routeQuery: routeQuery.value,
+      })
 
       if (requestId !== latestRequestId.value) {
         return
       }
 
       const tagPerformances = buildSubjectPerformanceFromTags(subjectDetail.tag_overview)
-      const fallbackTag = [...tagPerformances].sort((left, right) => right.totalAttempts - left.totalAttempts)[0]
-      const nextTags = Array.from(
-        new Set(subjectDetail.tag_overview.map((entry) => entry.tag).filter((tag) => tag.length > 0)),
-      )
-      const queryTag = getTagFromQuery(route.query)
-      const activeTag =
-        [selectedTag.value, queryTag, subjectDetail.focus_tag, fallbackTag?.subject ?? ''].find(
-          (tag) => tag.length > 0 && nextTags.includes(tag),
-        ) ?? ''
+      const fallbackTag = pickMostPracticedSubject(tagPerformances)
+      const nextTags = buildUniqueNonEmptyStrings(subjectDetail.tag_overview.map((entry) => entry.tag))
+      const queryTag = getTagFromQuery(routeQuery.value)
+      const activeTag = resolveActiveTag({
+        selectedTag: selectedTag.value,
+        queryTag,
+        focusTag: subjectDetail.focus_tag,
+        fallbackTag: fallbackTag?.subject ?? '',
+        availableTags: nextTags,
+      })
 
       currentSubjectDetail.value = subjectDetail
       tags.value = nextTags
@@ -888,21 +343,12 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
       updateKpiCards(
         selectedSubject.value,
         subjectPerformances,
-        {
-          total_attempts: subjectDetail.summary.total_attempts,
-          correct_attempts: subjectDetail.summary.correct_attempts,
-          accuracy_rate: subjectDetail.summary.accuracy_rate,
-          weekly_goal: subjectDetail.summary.weekly_goal,
-          weekly_goal_progress: subjectDetail.summary.weekly_goal_progress,
-          subject_rank:
-            selectedSubjectRank > 0
-              ? selectedSubjectRank
-              : overviewData.summary.subject_rank,
-          active_subject_count:
-            activeSubjectCount > 0
-              ? activeSubjectCount
-              : overviewData.summary.active_subject_count,
-        },
+        buildSubjectRankingSummary({
+          subjectDetail,
+          selectedSubjectRank,
+          activeSubjectCount,
+          overviewSummary: overviewData.summary,
+        }),
         {
           rankLabel: 'Subject Ranking',
           rankUnitLabel: 'subjects',
@@ -923,100 +369,39 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   }
 
   const shareCurrentStatistics = async () => {
-    if (!selectedSubject.value) return
-
-    const shareText = `Check out my stats for ${selectedSubject.value}!`
     errorMessage.value = ''
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Share My Statistics',
-          text: shareText,
-          url: window.location.href,
-        })
-      } catch {
-        // User cancelled.
-      }
-      return
-    }
-
-    if (!isClipboardSupported.value) {
-      errorMessage.value = 'Sharing is not supported in this browser.'
-      return
-    }
-
-    try {
-      await copyToClipboard(window.location.href)
-      errorMessage.value = 'Sharing is not supported. URL copied to clipboard.'
-    } catch {
-      errorMessage.value = 'Sharing is not supported in this browser.'
+    const nextErrorMessage = await shareOverviewStatistics({
+      subject: selectedSubject.value,
+      isClipboardSupported: isClipboardSupported.value,
+      copyToClipboard,
+    })
+    if (nextErrorMessage) {
+      errorMessage.value = nextErrorMessage
     }
   }
 
-  let ignoreSubjectRouteUpdate: (updater: () => void) => void = (updater) => updater()
-  let ignoreTagRouteUpdate: (updater: () => void) => void = (updater) => updater()
-
-  watchIgnorable(
-    () => route.query,
-    (query) => {
-      const querySubject = getSubjectFromQuery(query)
-      const queryTag = getTagFromQuery(query)
-
-      ignoreSubjectRouteUpdate(() => {
-        selectedSubject.value = querySubject
-      })
-
-      ignoreTagRouteUpdate(() => {
-        selectedTag.value = queryTag
-      })
-    },
-    { immediate: true },
-  )
-
-  const { ignoreUpdates: ignoreSubjectSelectionUpdate } = watchIgnorable(
+  useOverviewRouteSync({
+    routeQuery,
     selectedSubject,
-    (subject) => {
-      syncRouteSubject(subject)
-
-      if (isSubjectPatchedFromResponse.value) {
-        isSubjectPatchedFromResponse.value = false
+    selectedTag,
+    isTagView,
+    isSubjectPatchedFromResponse,
+    isInitialRefreshTriggered,
+    routeWeekStart,
+    routeTimeZone,
+    syncRouteSubject,
+    syncRouteTag,
+    getSubjectFromQuery,
+    getTagFromQuery,
+    refreshCharts,
+    onTagChanged: (tag) => {
+      if (!currentSubjectDetail.value) {
         return
       }
 
-      isInitialRefreshTriggered.value = true
-      void refreshCharts()
+      const tagDailyStatistics = buildStatisticsDataFromSubjectDetail(currentSubjectDetail.value, tag)
+      updateAttemptsStackedChart(tagDailyStatistics.daily_statistics)
     },
-    { immediate: true },
-  )
-  ignoreSubjectRouteUpdate = ignoreSubjectSelectionUpdate
-
-  const { ignoreUpdates: ignoreTagSelectionUpdate } = watchIgnorable(selectedTag, (tag) => {
-    if (!isTagView.value) {
-      return
-    }
-
-    syncRouteTag(tag)
-
-    if (!currentSubjectDetail.value) {
-      return
-    }
-
-    const tagDailyStatistics = buildStatisticsDataFromSubjectDetail(currentSubjectDetail.value, tag)
-    updateAttemptsStackedChart(tagDailyStatistics.daily_statistics)
-  })
-  ignoreTagRouteUpdate = ignoreTagSelectionUpdate
-
-  watch([routeWeekStart, routeTimeZone], ([nextWeekStart, nextTimeZone], [prevWeekStart, prevTimeZone]) => {
-    if (nextWeekStart === prevWeekStart && nextTimeZone === prevTimeZone) {
-      return
-    }
-
-    if (!isInitialRefreshTriggered.value) {
-      return
-    }
-
-    void refreshCharts()
   })
 
   return {

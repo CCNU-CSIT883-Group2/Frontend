@@ -31,7 +31,7 @@ import type { ChartData, ChartOptions } from 'chart.js'
 import type {
   OverviewInsight,
   OverviewKpiCard,
-} from '@/features/overview/composables/useOverviewStatistics'
+} from '@/features/overview/composables/overviewStatistics.presentation'
 
 defineProps<{
   kpiCards: OverviewKpiCard[]

@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import type { OverviewKpiCard } from '@/features/overview/composables/useOverviewStatistics'
+import type { OverviewKpiCard } from '@/features/overview/composables/overviewStatistics.presentation'
 
 defineProps<{
   cards: OverviewKpiCard[]

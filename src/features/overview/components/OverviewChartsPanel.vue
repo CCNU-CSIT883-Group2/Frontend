@@ -109,7 +109,7 @@
 
 <script setup lang="ts">
 import OverviewInsightsPanel from '@/features/overview/components/OverviewInsightsPanel.vue'
-import type { OverviewInsight } from '@/features/overview/composables/useOverviewStatistics'
+import type { OverviewInsight } from '@/features/overview/composables/overviewStatistics.presentation'
 import type { ChartData, ChartOptions } from 'chart.js'
 import { computed } from 'vue'
 

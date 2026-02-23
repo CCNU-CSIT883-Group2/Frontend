@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import type { OverviewInsight } from '@/features/overview/composables/useOverviewStatistics'
+import type { OverviewInsight } from '@/features/overview/composables/overviewStatistics.presentation'
 import { computed } from 'vue'
 
 const props = defineProps<{
