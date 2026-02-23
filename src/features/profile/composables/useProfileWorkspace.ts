@@ -1,3 +1,13 @@
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「组合式逻辑模块」。
+ * - 封装 profile 领域的状态管理与副作用流程（模块：useProfileWorkspace）。
+ *
+ * 设计原因（为什么）：
+ * - 把复杂逻辑从组件模板中抽离，保证组件更聚焦于渲染职责。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import { useProfileActivityChart } from '@/features/profile/composables/profileActivityChart'
 import {
   submitLogout,
@@ -96,6 +106,7 @@ export const useProfileWorkspace = () => {
       const hasDraftAgainstPrevious =
         form.name.trim() !== previousName || form.email.trim() !== previousEmail
 
+      // 仅在本地没有草稿改动时同步 store，避免覆盖用户正在编辑的输入。
       if (!hasDraftAgainstPrevious) {
         form.name = nextName
         form.email = nextEmail
@@ -262,7 +273,7 @@ export const useProfileWorkspace = () => {
     try {
       await submitLogout()
     } catch {
-      // Keep local logout flow even if server logout fails.
+      // 后端登出失败也继续本地清理，避免用户停留在“伪登录”状态。
     } finally {
       userStore.clearUser()
       isLoggingOut.value = false

@@ -1,3 +1,13 @@
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「组合式逻辑模块」。
+ * - 封装 overview 领域的状态管理与副作用流程（模块：useOverviewRouteSync）。
+ *
+ * 设计原因（为什么）：
+ * - 把复杂逻辑从组件模板中抽离，保证组件更聚焦于渲染职责。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import { watchIgnorable } from '@vueuse/core'
 import { watch, type ComputedRef, type Ref } from 'vue'
 
@@ -37,6 +47,7 @@ export const useOverviewRouteSync = ({
   let ignoreSubjectRouteUpdate: (updater: () => void) => void = (updater) => updater()
   let ignoreTagRouteUpdate: (updater: () => void) => void = (updater) => updater()
 
+  // 路由 -> 状态：URL 变化时回填 subject/tag。
   watchIgnorable(
     routeQuery,
     (query) => {
@@ -57,6 +68,7 @@ export const useOverviewRouteSync = ({
   const { ignoreUpdates: ignoreSubjectSelectionUpdate } = watchIgnorable(
     selectedSubject,
     (subject) => {
+      // 状态 -> 路由：用户选择变化后同步回 query。
       syncRouteSubject(subject)
 
       if (isSubjectPatchedFromResponse.value) {
@@ -92,6 +104,7 @@ export const useOverviewRouteSync = ({
         return
       }
 
+      // 周起始日或时区变化会影响统计口径，需要重新拉取图表数据。
       void refreshCharts()
     },
   )

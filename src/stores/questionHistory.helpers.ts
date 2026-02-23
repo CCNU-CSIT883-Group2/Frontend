@@ -1,3 +1,13 @@
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「Store 辅助函数模块」。
+ * - 提供 Store 所需的纯函数与转换逻辑（模块：questionHistory.helpers）。
+ *
+ * 设计原因（为什么）：
+ * - 把可复用计算从状态容器中拆分，降低耦合并提升可测试性。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import type {
   CreateQuestionRequest,
   History,

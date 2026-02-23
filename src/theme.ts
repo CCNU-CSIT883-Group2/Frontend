@@ -1,3 +1,13 @@
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「主题配置模块」。
+ * - 定义主题色彩与样式相关配置，提供统一视觉基线。
+ *
+ * 设计原因（为什么）：
+ * - 集中维护设计令牌，避免样式常量散落导致 UI 不一致。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import { definePreset } from '@primevue/themes'
 import Aura from '@primevue/themes/aura'
 

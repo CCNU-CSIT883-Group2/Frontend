@@ -38,6 +38,16 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「功能组件」。
+ * - 实现 questions 领域的界面展示与交互行为（组件：AnswerPanel）。
+ *
+ * 设计原因（为什么）：
+ * - 将业务界面拆成职责清晰的组件单元，减少重复代码并提升复用性。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import QuestionList from '@/features/questions/components/QuestionList.vue'
 import { useAnswerPanelState } from '@/features/questions/composables/useAnswerPanelState'
 import { nextTick, ref } from 'vue'

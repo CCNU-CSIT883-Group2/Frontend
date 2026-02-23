@@ -1,3 +1,13 @@
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「服务层模块」。
+ * - 封装题目创建相关的流式请求与数据处理逻辑。
+ *
+ * 设计原因（为什么）：
+ * - 把异步通信细节隔离在服务层，减轻组件与状态层复杂度。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import type {
   CreateQuestionRequest,
   QuestionsCreateStreamDonePayload,
@@ -53,6 +63,7 @@ function parseSseBlock(block: string): ParsedSseEvent | null {
   }
 
   if (dataLines.length === 0) return null
+  // SSE 允许同一个 event 使用多行 data，按协议需要拼回完整 payload。
   const raw = dataLines.join('\n')
 
   try {
@@ -79,6 +90,7 @@ const isProgressPayload = (payload: unknown): payload is QuestionsCreateStreamPr
 const isDonePayload = (payload: unknown): payload is QuestionsCreateStreamDonePayload => {
   if (!isObject(payload)) return false
 
+  // done 事件结构不完整时不抛错，交给调用方根据 streamDone 判断兜底。
   return (
     isObject(payload.history) &&
     typeof payload.number === 'number' &&
@@ -148,6 +160,7 @@ export async function streamQuestionCreation({
 
     if (event.eventName === 'done' && isDonePayload(event.payload)) {
       onDone?.(event.payload)
+      // 只有收到合法 done 事件才视为流正常结束。
       streamDone = true
     }
   }
@@ -174,6 +187,7 @@ export async function streamQuestionCreation({
   }
 
   if (!streamDone) {
+    // 后端提前断流时显式失败，避免上层误判为成功创建。
     throw new Error('Stream ended before receiving done event')
   }
 }

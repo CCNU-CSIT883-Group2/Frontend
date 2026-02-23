@@ -1,3 +1,13 @@
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「组合式逻辑模块」。
+ * - 封装 overview 领域的状态管理与副作用流程（模块：useOverviewStatistics）。
+ *
+ * 设计原因（为什么）：
+ * - 把复杂逻辑从组件模板中抽离，保证组件更聚焦于渲染职责。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import {
   fetchOverviewDashboardData,
   fetchOverviewSubjectDashboardData,
@@ -92,6 +102,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
   const tags = ref<string[]>([])
   const isLoading = ref(false)
   const errorMessage = ref('')
+  // 用于丢弃过期请求结果，避免快速切换筛选条件时旧响应覆盖新状态。
   const latestRequestId = ref(0)
   const isInitialRefreshTriggered = ref(false)
   const isSubjectPatchedFromResponse = ref(false)
@@ -274,6 +285,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
       }
 
       if (!hasActiveSubject) {
+        // “全科视图”：不进入 subject 细分接口，直接展示聚合统计。
         currentSubjectDetail.value = null
         tags.value = []
         selectedTag.value = ''
@@ -308,6 +320,7 @@ export function useOverviewStatistics(): UseOverviewStatisticsResult {
         return
       }
 
+      // “单科视图”：根据 query/focus/fallback 计算有效 tag，避免 URL 与数据不一致。
       const tagPerformances = buildSubjectPerformanceFromTags(subjectDetail.tag_overview)
       const fallbackTag = pickMostPracticedSubject(tagPerformances)
       const nextTags = buildUniqueNonEmptyStrings(subjectDetail.tag_overview.map((entry) => entry.tag))

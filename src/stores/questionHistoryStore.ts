@@ -1,3 +1,13 @@
+/**
+ * 文件说明（是什么）：
+ * - 本文件是「Pinia 状态仓库模块」。
+ * - 管理全局/跨组件状态与相关动作（模块：questionHistoryStore）。
+ *
+ * 设计原因（为什么）：
+ * - 集中维护状态变更入口，防止状态修改分散造成数据不一致。
+ * - 通过在该文件集中同类职责，避免逻辑分散，降低后续维护与排障成本。
+ */
+
 import axios from '@/axios'
 import { API_BASE_URL } from '@/config'
 import { streamQuestionCreation } from '@/services/questionCreationStream'
@@ -23,6 +33,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
   const histories = shallowRef<History[]>([])
   const isFetching = ref(false)
 
+  // 供侧边栏感知“刚创建完成的题单”，用于自动选中最新记录。
   const hasCreatedHistory = ref(false)
   const latestCreatedHistoryId = shallowRef<number | null>(null)
   const isStreaming = ref(false)
@@ -136,6 +147,7 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
       })
       return
     } catch (streamError) {
+      // 流式接口失败时回退到普通接口，尽可能保证用户操作可完成。
       try {
         await createWithFallback(requestPayload)
       } catch (fallbackError) {
