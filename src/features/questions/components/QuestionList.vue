@@ -13,9 +13,21 @@
     </div>
 
     <div class="overflow-y-auto flex-1 no-scrollbar">
-      <QuestionListItem v-for="(question, index) in questions" :key="question.question_id" ref="questionRef"
-        v-model:attempt="attempts[index]" v-model:is-collapsed="collapsedStates[index]" v-model:reset-token="resetToken"
-        :is-answered="answeredStates[index]" :no="index + 1" :question="question" class="my-2 mx-3" />
+      <TransitionGroup name="question-card" tag="div" appear class="relative">
+        <QuestionListItem
+          v-for="(question, index) in questions"
+          :key="question.question_id"
+          ref="questionRef"
+          v-model:attempt="attempts[index]"
+          v-model:is-collapsed="collapsedStates[index]"
+          v-model:reset-token="resetToken"
+          :is-answered="answeredStates[index]"
+          :no="index + 1"
+          :question="question"
+          :style="{ '--question-enter-delay': `${Math.min(index, 6) * 24}ms` }"
+          class="my-2 mx-3"
+        />
+      </TransitionGroup>
     </div>
   </div>
 </template>
@@ -203,3 +215,41 @@ onUnmounted(() => {
   timer.pause()
 })
 </script>
+
+<style scoped>
+.question-card-enter-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--question-enter-delay, 0ms);
+}
+
+.question-card-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.question-card-enter-from,
+.question-card-leave-to {
+  opacity: 0.5;
+  transform: translateX(32px);
+}
+
+.question-card-move {
+  transition: transform 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .question-card-enter-active,
+  .question-card-leave-active,
+  .question-card-move {
+    transition: none;
+  }
+}
+</style>
