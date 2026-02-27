@@ -75,8 +75,8 @@ const MODEL_CODE_BY_ALIAS: Record<string, string> = {
 
 /** 未从后端加载到可用模型列表时的内置兜底选项 */
 export const DEFAULT_MODEL_OPTIONS: QuestionModelOption[] = [
-  { label: MODEL_LABEL_BY_CODE.C, value: 'C' },
-  { label: MODEL_LABEL_BY_CODE.K, value: 'K' },
+  { label: MODEL_LABEL_BY_CODE.C ?? 'ChatGPT', value: 'C' },
+  { label: MODEL_LABEL_BY_CODE.K ?? 'Kimi', value: 'K' },
 ]
 
 /**

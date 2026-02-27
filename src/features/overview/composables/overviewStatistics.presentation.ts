@@ -237,13 +237,14 @@ export const buildOverviewInsights = ({
 
   // 按条件逐条追加洞察，保持固定展示顺序
   const insightsPayload: OverviewInsight[] = []
+  const peakDay = sortedByAttempts[0]
 
   // 峰值作答日
-  if (sortedByAttempts[0]?.total_attempts > 0) {
+  if (peakDay && peakDay.total_attempts > 0) {
     insightsPayload.push({
       id: 'peak-day',
       title: 'Peak Study Day',
-      description: `${formatDateLabel(sortedByAttempts[0].date)} reached ${sortedByAttempts[0].total_attempts} attempts for ${selectedSubjectLabel}.`,
+      description: `${formatDateLabel(peakDay.date)} reached ${peakDay.total_attempts} attempts for ${selectedSubjectLabel}.`,
       icon: 'pi pi-bolt',
       tone: 'positive',
     })

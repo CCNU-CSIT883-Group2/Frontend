@@ -112,7 +112,12 @@ export const calculateConsecutiveActiveDays = (dailyStatistics: DailyStatistics[
   let streak = 0
 
   for (let index = dailyStatistics.length - 1; index >= 0; index -= 1) {
-    if (dailyStatistics[index].total_attempts > 0) {
+    const statistic = dailyStatistics[index]
+    if (!statistic) {
+      continue
+    }
+
+    if (statistic.total_attempts > 0) {
       streak += 1
       continue
     }
