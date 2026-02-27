@@ -153,30 +153,38 @@ if (requestId !== latestRequestId.value) return
 
 ---
 
-## 2.6 “部分成功”语义处理到位
+## 2.6 自动保存 + 实时进度 + 已提交锁定闭环
 
 **代码证据**
 
+- `src/features/questions/composables/useQuestionAutoSave.ts`
 - `src/features/questions/composables/useSubmit.ts`
+- `src/features/questions/composables/useAnswerPanelState.ts`
+- `src/features/questions/components/QuestionList.vue`
 
 关键逻辑（简化）：
 
 ```ts
-const settledResults = await Promise.allSettled(...)
+watch(attempts, () => {
+  queueSave(questionId, answers)
+}, { deep: true })
 ```
 
 ```ts
-return { successCount, failureCount, firstError, answeredMap }
+watch(savedProgress, (progress) => {
+  historyStore.updateHistoryProgress(historyId, progress)
+})
 ```
 
 **亮点是什么**
 
-- 提交答案不是简单 all-or-nothing，而是保留部分成功结果并返回统计信息。
+- 作答阶段自动保存到 `/questions/save`，并且按“已保存题数/总题数”实时更新 history 进度条。
+- 提交阶段统一走批量 `/attempt`，提交后通过 `is_submitted` 锁定题集，避免历史题集被误改。
 
 **为什么是亮点**
 
-- 用户在弱网场景不会因为单个请求失败而丢掉全部提交成果。
-- 组件可以据此做更细粒度反馈（部分成功/完全失败）。
+- 用户心智更稳定：编辑即保存、保存即见进度、提交后即锁定。
+- 把“保存、提交、锁定、重置”串成完整状态闭环，减少跨组件状态不一致。
 
 ---
 
@@ -316,20 +324,23 @@ return { successCount, failureCount, firstError, answeredMap }
 
 ---
 
-## 3.6 部分成功提交语义需要 UI 全链路协同
+## 3.6 自动保存状态机需要严格处理时序与回写
 
 **关键代码**
 
+- `src/features/questions/composables/useQuestionAutoSave.ts`
 - `src/features/questions/composables/useSubmit.ts`
 - `src/features/questions/components/QuestionList.vue`
 
 **难点**
 
-- 提交层返回 `success/failure` 混合结果后，UI 需要正确高亮、提示和进度回写。
+- 自动保存并不是单个请求，而是“防抖队列 + 飞行请求 + flush + 重置”的组合状态机。
+- 必须避免旧请求晚到覆盖新答案（回写污染），并保证 submit/reset 前后的一致性。
 
 **风险点**
 
-- 若只关注失败提示，可能遗漏成功部分持久化，造成用户认知混乱。
+- 若缺少版本控制或 flush，可能出现“UI 显示已保存，但后端仍是旧答案”。
+- 若重置时不清队列，旧请求可能在 reset 后回写，导致进度条与题目状态反复跳变。
 
 ---
 

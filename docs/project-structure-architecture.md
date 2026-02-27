@@ -373,6 +373,7 @@ features/questions/
     useAnswerPanelState.ts
     useQuestions.ts
     useAttempts.ts
+    useQuestionAutoSave.ts
     useSubmit.ts
     useQuestionListState.ts
     useQuestionElapsedTimer.ts
@@ -413,36 +414,98 @@ const cancel = () => { controller?.abort(); ... }
 
 - 当 `historyId` 切换很快时，避免旧请求覆盖新状态（竞态问题）。
 
-### 8.4 提交答案：`useSubmit.ts`
+### 8.4 自动保存与进度同步：`useQuestionAutoSave.ts` + `QuestionList.vue`
 
 关键代码：
 
 ```ts
-const settledResults = await Promise.allSettled(
-  questionIds.map((questionId, index) => submitRequest(...)),
-)
+watch(attempts, () => {
+  queueSave(questionId, answers)
+}, { deep: true })
+```
+
+```ts
+watch(savedProgress, (progress) => {
+  historyStore.updateHistoryProgress(historyId, progress)
+})
 ```
 
 是什么：
 
-- 并发提交每道题答案，返回成功/失败统计与首个错误。
+- `useQuestionAutoSave` 负责每道题的防抖保存（`POST /questions/save`），并维护单题保存状态（`idle/saving/saved/error`）。
+- `QuestionList.vue` 订阅 `savedProgress`，把“已保存且有答案题数 / 总题数”实时回写到侧边栏进度条。
 
 为什么：
 
-- `allSettled` 支持部分成功，用户不会因单题失败丢失整批提交结果。
+- 将“保存队列 + 版本防旧包回写 + 进度计算”集中在 composable，避免列表组件膨胀。
+- 自动保存成功即更新进度，用户对当前学习状态有即时反馈。
 
-### 8.5 面板状态协调：`useAnswerPanelState.ts` + `useQuestionListState.ts`
+### 8.5 提交答案：`useSubmit.ts` + `QuestionList.vue`
+
+关键代码：
+
+```ts
+await flush()
+const result = await submit({ historyId, answers })
+```
+
+```ts
+await axios.post('/attempt', {
+  history_id: historyId,
+  answers,
+})
+```
+
+是什么：
+
+- 提交前先 `flush` 自动保存队列，确保后端收到的是用户最后一次编辑答案。
+- 使用新版批量 `POST /attempt` 一次提交整套答案，后端返回 `summary`（总题数、正确数、正确率）。
+
+为什么：
+
+- 接口语义更清晰（提交是“整套结果结算”而不是单题散提）。
+- 减少网络请求风暴，前端状态收敛更简单。
+
+### 8.6 重置流程：`QuestionList.vue` + `questionHistoryStore.resetHistory`
+
+关键代码：
+
+```ts
+confirm.require({
+  accept: () => void performReset(),
+})
+```
+
+```ts
+await historyStore.resetHistory(historyId) // POST /history/reset
+resetState()
+historyStore.updateHistoryProgress(historyId, 0)
+```
+
+是什么：
+
+- 用户确认后调用后端 `/history/reset`，成功后再重置本地作答、计时器与自动保存状态。
+- 重置完成后触发 `reset-completed`，由上层重新拉取 attempts 对齐后端。
+
+为什么：
+
+- 保证“后端状态”和“前端界面状态”一致，避免只清本地造成数据错觉。
+- 把 reset API 调用下沉到 store，组件层只处理交互与反馈。
+
+### 8.7 面板状态协调：`useAnswerPanelState.ts` + `useQuestionListState.ts`
 
 是什么：
 
 - `useAnswerPanelState` 负责“题目 + 既有作答”融合。
+- 同时根据 attempts 的 `is_submitted` 聚合判定“已提交锁定”，确保历史已提交题集不可继续作答。
 - `useQuestionListState` 负责折叠态、已答态、重置态同步。
 
 为什么：
 
 - UI 状态拆层后，`QuestionList.vue` 专注渲染和事件转发。
+- 将“可编辑/不可编辑”规则统一放在状态协调层，避免散落在多个组件出现判定不一致。
 
-### 8.6 流式创建题目服务：`services/questionCreationStream.ts`
+### 8.8 流式创建题目服务：`services/questionCreationStream.ts`
 
 关键代码：
 
