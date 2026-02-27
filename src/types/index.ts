@@ -12,6 +12,7 @@ export interface History {
   create_time: number
   history_id: number
   progress: number
+  status?: string
   subject: string
   tag: string
   user_id: string
@@ -52,12 +53,32 @@ export interface QuestionsCreateData {
   number: number
 }
 
-export interface AttemptPostData {
-  attempt: {
-    history_id: number
-    question_id: number
-    is_correct: boolean
-  }
+export interface AttemptSubmitSummary {
+  total_questions: number
+  correct_questions: number
+  correct_rate: number
+}
+
+export interface AttemptSubmitData {
+  summary: AttemptSubmitSummary
+}
+
+export interface AttemptAnswerInput {
+  question_id: number
+  choice_answers?: number[] | null
+  blank_answer?: string | null
+}
+
+export interface AttemptSubmitRequest {
+  history_id: number
+  answers: AttemptAnswerInput[]
+}
+
+export interface QuestionSaveRequest {
+  history_id: number
+  question_id: number
+  choice_answers?: number[] | null
+  blank_answer?: string | null
 }
 
 export interface Attempt {
@@ -66,9 +87,13 @@ export interface Attempt {
   history_id: number
   attempt_id: number
   attempt_time: string
+  blank_answer?: string | null
   is_correct: boolean
+  is_submitted: boolean
   user_id: string
 }
+
+export type QuestionSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export interface User {
   user_id: string

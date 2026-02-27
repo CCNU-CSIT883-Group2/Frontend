@@ -9,28 +9,27 @@
  */
 
 import axios from '@/axios'
-import type { AttemptPostData, Response } from '@/types'
+import type {
+  AttemptAnswerInput,
+  AttemptSubmitData,
+  AttemptSubmitSummary,
+  Response,
+} from '@/types'
 import { computed, shallowRef } from 'vue'
 
 /** 批量提交作答时所需的入参结构 */
 interface SubmitQuestionsPayload {
   historyId: number
-  type: string
-  /** 题目 ID 列表（与 answers 数组下标一一对应） */
-  questionIds: number[]
-  /** 每道题的选项索引列表（多选题可有多个） */
-  answers: number[][]
+  answers: AttemptAnswerInput[]
 }
 
 /** 批量提交后的结果汇总 */
 interface SubmitResult {
-  /** key=question_id，value=是否已成功提交（true=成功） */
-  answeredMap: Map<number, boolean>
-  /** 成功提交的题目数量 */
-  successCount: number
-  /** 失败的题目数量 */
-  failureCount: number
-  /** 第一条失败原因（用于展示错误通知），无失败时为 null */
+  /** 后端返回的提交汇总 */
+  summary: AttemptSubmitSummary | null
+  /** 是否提交成功 */
+  success: boolean
+  /** 失败原因（成功时为 null） */
   firstError: string | null
 }
 
@@ -38,39 +37,27 @@ interface SubmitResult {
  * 题目批量提交 composable。
  *
  * 设计要点：
- * - 使用 Promise.allSettled 并发提交所有题目，允许部分成功；
- * - 以后端返回的 question_id 作为成功标识，而非本地索引；
- * - pendingCount 累加所有并发请求数，任意一个完成都不会提前清零。
+ * - 使用新版 /attempt 接口一次性提交整套题；
+ * - 统一返回 success/summary，便于组件层处理提示与状态更新。
  */
 export function useSubmit() {
-  /** 当前进行中的请求数量（用于计算 isSubmitting） */
-  const pendingCount = shallowRef(0)
-  /** 已成功提交的题目 Map（question_id → true） */
-  const answeredMap = shallowRef<Map<number, boolean>>(new Map())
+  /** 当前是否正在提交 */
+  const isSubmitting = shallowRef(false)
   /** 最后一次提交的错误信息（null 表示全部成功） */
   const error = shallowRef<string | null>(null)
 
-  /** 是否有任意请求在飞行中 */
-  const isSubmitting = computed(() => pendingCount.value > 0)
+  /** 最近一次提交的后端汇总信息 */
+  const summary = shallowRef<AttemptSubmitSummary | null>(null)
 
   /**
-   * 提交单道题的作答到后端 /attempt 接口。
-   * 返回后端确认的 question_id，用于在 answeredMap 中标记成功。
+   * 将题目作答批量提交到后端 /attempt 接口。
    */
-  const submitRequest = async (
-    historyId: number,
-    type: string,
-    questionId: number,
-    choiceAnswers: number[],
-  ) => {
-    const response = await axios.post<Response<AttemptPostData>>('/attempt', {
+  const submitRequest = async (historyId: number, answers: AttemptAnswerInput[]) => {
+    const response = await axios.post<Response<AttemptSubmitData>>('/attempt', {
       history_id: historyId,
-      question_id: questionId,
-      type,
-      choice_answers: choiceAnswers,
+      answers,
     })
-
-    return response.data.data.attempt.question_id
+    return response.data.data.summary
   }
 
   /**
@@ -78,77 +65,49 @@ export function useSubmit() {
    *
    * 流程：
    * 1. 重置状态；
-   * 2. 若题目为空直接返回空结果；
-   * 3. Promise.allSettled 并发提交所有题目（允许部分失败）；
-   * 4. 遍历结果：fulfilled → 写入 answeredMap，rejected → 收集错误消息；
-   * 5. 返回完整的 SubmitResult 供调用方展示通知和更新 UI。
+   * 2. 若题目为空直接返回；
+   * 3. 调用 /attempt 一次性提交；
+   * 4. 返回 success/summary/firstError 供调用方更新 UI。
    */
-  const submit = async ({
-    historyId,
-    type,
-    questionIds,
-    answers,
-  }: SubmitQuestionsPayload): Promise<SubmitResult> => {
-    answeredMap.value = new Map()
+  const submit = async ({ historyId, answers }: SubmitQuestionsPayload): Promise<SubmitResult> => {
     error.value = null
-    pendingCount.value = questionIds.length
+    summary.value = null
+    isSubmitting.value = true
 
-    if (questionIds.length === 0) {
+    if (answers.length === 0) {
+      isSubmitting.value = false
       return {
-        answeredMap: answeredMap.value,
-        successCount: 0,
-        failureCount: 0,
+        summary: null,
+        success: false,
         firstError: null,
       }
     }
 
-    // 允许部分成功：即使某些题提交失败，也保留已成功题目的结果。
-    const settledResults = await Promise.allSettled(
-      questionIds.map((questionId, index) =>
-        submitRequest(historyId, type, questionId, answers[index] ?? []),
-      ),
-    )
-
-    const nextAnsweredMap = new Map<number, boolean>()
-    const errors: string[] = []
-
-    settledResults.forEach((result) => {
-      if (result.status === 'fulfilled') {
-        // 以后端确认的 question_id 作为成功键，避免依赖本地索引顺序。
-        nextAnsweredMap.set(result.value, true)
-        return
+    try {
+      const nextSummary = await submitRequest(historyId, answers)
+      summary.value = nextSummary
+      return {
+        summary: nextSummary,
+        success: true,
+        firstError: null,
       }
-
-      const message = result.reason instanceof Error ? result.reason.message : String(result.reason)
-      errors.push(message)
-    })
-
-    answeredMap.value = nextAnsweredMap
-
-    const firstError = errors[0] ?? null
-    const failureCount = errors.length
-    const successCount = nextAnsweredMap.size
-
-    // 有任意失败时设置 error 供外部读取
-    if (failureCount > 0) {
-      error.value = firstError
-    }
-
-    pendingCount.value = 0
-
-    return {
-      answeredMap: nextAnsweredMap,
-      successCount,
-      failureCount,
-      firstError,
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : String(requestError)
+      error.value = message
+      return {
+        summary: null,
+        success: false,
+        firstError: message,
+      }
+    } finally {
+      isSubmitting.value = false
     }
   }
 
   return {
     submit,
-    answeredMap,
+    summary,
     error,
-    pendingCount,
-    isSubmitting,
+    isSubmitting: computed(() => isSubmitting.value),
   }
 }

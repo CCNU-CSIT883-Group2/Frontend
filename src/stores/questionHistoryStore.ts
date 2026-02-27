@@ -246,6 +246,22 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     histories.value = updateHistoryProgressState(histories.value, historyId, progress)
   }
 
+  /**
+   * 重置指定题单的作答状态（后端 /history/reset）。
+   * 成功时将本地进度先置为 0，返回 null；失败返回错误字符串。
+   */
+  const resetHistory = async (historyId: number): Promise<string | null> => {
+    try {
+      await axios.post<Response<undefined>>('/history/reset', {
+        history_id: historyId,
+      })
+      updateHistoryProgress(historyId, 0)
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : 'Unable to reset history.'
+    }
+  }
+
   return {
     histories,
     subjects,
@@ -262,5 +278,6 @@ export const useQuestionHistoryStore = defineStore('questionHistory', () => {
     createQuestions,
     deleteHistory,
     updateHistoryProgress,
+    resetHistory,
   }
 })

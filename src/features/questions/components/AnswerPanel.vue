@@ -7,8 +7,11 @@
         v-model:attempts="attempts"
         v-model:is-answer-saved="isAnswerSaved"
         v-model:scroll-to="scrollToIndex"
+        :initial-saved-question-ids="initialSavedQuestionIds"
+        :is-hydrated="isHydrated"
         :questions="questions"
         class="flex-1 min-h-0 min-w-0"
+        @reset-completed="handleResetCompleted"
       />
 
       <!-- 题目导航面板（右/下）：显示题号按钮，点击跳转并展开对应卡片 -->
@@ -64,7 +67,14 @@ interface AnswerPanelProps {
 const props = defineProps<AnswerPanelProps>()
 
 // 从 composable 获取题目列表、作答状态和保存状态
-const { questions, attempts, isAnswerSaved } = useAnswerPanelState(props.historyId)
+const {
+  questions,
+  attempts,
+  isAnswerSaved,
+  initialSavedQuestionIds,
+  isHydrated,
+  reloadAttempts,
+} = useAnswerPanelState(props.historyId)
 
 /** 向 QuestionList 传递的滚动目标索引（-1 表示不滚动） */
 const scrollToIndex = ref(-1)
@@ -81,5 +91,10 @@ const scrollToQuestion = async (questionIndex: number) => {
   }
 
   scrollToIndex.value = questionIndex
+}
+
+/** reset 成功后重拉当前题集作答，确保本地状态与后端一致 */
+const handleResetCompleted = () => {
+  void reloadAttempts()
 }
 </script>

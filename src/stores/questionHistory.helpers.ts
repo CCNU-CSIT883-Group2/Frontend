@@ -78,9 +78,13 @@ export const toDonePayloadFromCreateData = (
   if (!data?.history?.length) {
     throw new Error('No history returned from /questions/create')
   }
+  const firstHistory = data.history[0]
+  if (!firstHistory) {
+    throw new Error('No history returned from /questions/create')
+  }
 
   return {
-    history: data.history[0],
+    history: firstHistory,
     number: data.number,
     questions: data.questions,
     subject: data.subject,
@@ -106,8 +110,10 @@ export const updateHistoryProgressState = (
   // 将 progress 限制在合法范围 [0, 1]
   const normalizedProgress = Math.min(1, Math.max(0, progress))
   const nextHistories = [...histories]
+  const currentHistory = nextHistories[existingIndex]
+  if (!currentHistory) return histories
   nextHistories[existingIndex] = {
-    ...nextHistories[existingIndex],
+    ...currentHistory,
     progress: normalizedProgress,
   }
   return nextHistories

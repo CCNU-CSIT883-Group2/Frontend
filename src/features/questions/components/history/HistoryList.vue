@@ -1,8 +1,6 @@
 <template>
   <!-- ScrollPanel 提供自定义滚动条样式（通过 CSS 变量控制宽度） -->
   <ScrollPanel class="flex-1 p-0">
-    <!-- ConfirmDialog 实例：全局单例，通过 useConfirm 服务触发弹窗 -->
-    <ConfirmDialog />
     <div class="flex flex-col gap-1">
       <!-- 历史记录列表：单击选中，双击触发删除确认 -->
       <HistoryListItem

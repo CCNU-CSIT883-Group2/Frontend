@@ -13,7 +13,7 @@
         <!-- 提交按钮：所有题目作答完毕且未保存时才可点击 -->
         <Button :disabled="disableSubmit" label="Submit" severity="primary" size="small" @click="submitAnswers" />
         <!-- 刷新按钮：清空所有作答并重置计时器 -->
-        <Button icon="pi pi-refresh" severity="secondary" size="small" @click="resetState" />
+        <Button :disabled="isResetting" icon="pi pi-refresh" severity="secondary" size="small" @click="requestReset" />
       </div>
     </div>
 
@@ -31,6 +31,7 @@
           :is-answered="answeredStates[index]"
           :no="index + 1"
           :question="question"
+          :save-state="questionSaveStateMap.get(question.question_id) ?? 'idle'"
           :style="{ '--question-enter-delay': `${Math.min(index, 6) * 24}ms` }"
           class="my-2 mx-3"
         />
@@ -51,17 +52,19 @@
  */
 
 import QuestionListItem from '@/features/questions/components/QuestionListItem.vue'
+import { useQuestionAutoSave } from '@/features/questions/composables/useQuestionAutoSave'
 import { useQuestionElapsedTimer } from '@/features/questions/composables/useQuestionElapsedTimer'
 import { useQuestionListState } from '@/features/questions/composables/useQuestionListState'
 import { useSubmit } from '@/features/questions/composables/useSubmit'
 import { useQuestionHistoryStore } from '@/stores/questionHistoryStore'
 import { useUserSettingsStore } from '@/stores/userStore'
-import type { Question } from '@/types'
+import type { AttemptAnswerInput, Question } from '@/types'
 import { storeToRefs } from 'pinia'
-import { useToast } from 'primevue'
+import { useConfirm, useToast } from 'primevue'
 import {
   computed,
   nextTick,
+  ref,
   type ComponentPublicInstance,
   useTemplateRef,
   watch,
@@ -70,14 +73,26 @@ import {
 interface QuestionListProps {
   /** 题目列表（可选，默认为空数组） */
   questions?: Question[]
+  /** 题集首次加载时，已保存过答案的题目 ID 列表 */
+  initialSavedQuestionIds?: number[]
+  /** 当前题集是否已完成 questions/attempts 首次对齐 */
+  isHydrated?: boolean
 }
 
 const props = withDefaults(defineProps<QuestionListProps>(), {
   questions: () => [] as Question[],
+  initialSavedQuestionIds: () => [] as number[],
+  isHydrated: false,
 })
+
+const emit = defineEmits<{
+  (e: 'reset-completed'): void
+}>()
 
 // 包装为 computed，使 composable 中的 watch 能正确追踪 props 变化
 const questions = computed(() => props.questions)
+const initialSavedQuestionIds = computed(() => props.initialSavedQuestionIds)
+const isHydrated = computed(() => props.isHydrated)
 
 // defineModel 双向绑定父组件传入的状态
 const isAnswerSaved = defineModel<boolean>('isAnswerSaved', { default: false })
@@ -106,7 +121,25 @@ const { elapsedTime, resetElapsedTime } = useQuestionElapsedTimer({
 const { settings } = storeToRefs(useUserSettingsStore())
 const historyStore = useQuestionHistoryStore()
 const toast = useToast()
+const confirm = useConfirm()
 const { submit, isSubmitting } = useSubmit()
+const isResetting = ref(false)
+const currentHistoryId = computed<number | null>(() => questions.value[0]?.history_id ?? null)
+
+const {
+  questionSaveStateMap,
+  error: autoSaveError,
+  savedProgress,
+  flush,
+  resetSaveStates,
+} = useQuestionAutoSave({
+  historyId: currentHistoryId,
+  questions,
+  attempts,
+  isAnswerSaved,
+  initialSavedQuestionIds,
+  isHydrated,
+})
 
 /**
  * 提交按钮禁用条件：
@@ -118,17 +151,25 @@ const { submit, isSubmitting } = useSubmit()
 const disableSubmit = computed(() => {
   if (isAnswerSaved.value) return true
   if (questions.value.length === 0) return true
+  if (isResetting.value) return true
   if (isSubmitting.value) return true
   return attempts.value.some((attempt) => attempt.length === 0)
 })
 
+const toAttemptAnswerInput = (questionId: number, selectedAnswers: number[]): AttemptAnswerInput => {
+  const normalizedAnswers = Array.from(new Set(selectedAnswers)).sort((left, right) => left - right)
+  return {
+    question_id: questionId,
+    choice_answers: normalizedAnswers.length > 0 ? normalizedAnswers : null,
+  }
+}
+
 /**
  * 提交所有题目的作答：
- * 1. 从第一道题获取 history_id 和 type；
- * 2. 并发提交（允许部分失败）；
- * 3. 根据后端返回结果更新 answeredStates 和 isAnswerSaved；
- * 4. 有失败时展示警告或错误通知；
- * 5. 全部成功时更新本地 store 的进度并刷新历史列表。
+ * 1. 先 flush 自动保存队列，确保后端拿到最新答案；
+ * 2. 调用新版 /attempt 批量提交；
+ * 3. 成功后锁定题目并展示 summary；
+ * 4. 更新本地进度为 100%，并刷新历史列表。
  */
 const submitAnswers = async () => {
   if (disableSubmit.value) return
@@ -136,47 +177,111 @@ const submitAnswers = async () => {
   const firstQuestion = questions.value[0]
   if (!firstQuestion) return
 
-  const questionIds = questions.value.map((question) => question.question_id)
+  await flush()
+
+  const answers = questions.value.map((question, index) =>
+    toAttemptAnswerInput(question.question_id, attempts.value[index] ?? []),
+  )
   const submitResult = await submit({
     historyId: firstQuestion.history_id,
-    type: firstQuestion.type,
-    questionIds,
-    answers: attempts.value,
+    answers,
   })
 
-  // 按 question_id 更新每道题的已答状态
-  answeredStates.value = questionIds.map(
-    (questionId) => submitResult.answeredMap.get(questionId) === true,
-  )
-  isAnswerSaved.value = answeredStates.value.every(Boolean)
-
-  // 部分或全部失败时展示通知
-  if (submitResult.failureCount > 0) {
-    const hasAnySuccess = submitResult.successCount > 0
-    const summary = hasAnySuccess ? 'Partial submission' : 'Submit failed'
-    const detail = hasAnySuccess
-      ? `${submitResult.successCount}/${questionIds.length} answers were saved. ${submitResult.firstError ?? ''}`.trim()
-      : (submitResult.firstError ?? 'Unable to submit answers. Please try again.')
-
+  if (!submitResult.success) {
     toast.add({
-      severity: hasAnySuccess ? 'warn' : 'error',
-      summary,
-      detail,
+      severity: 'error',
+      summary: 'Submit failed',
+      detail: submitResult.firstError ?? 'Unable to submit answers. Please try again.',
       life: 3500,
     })
+    return
   }
 
-  // 全部成功时将进度更新为 1 并刷新历史列表（确保侧边栏显示最新进度）
-  if (isAnswerSaved.value) {
-    historyStore.updateHistoryProgress(firstQuestion.history_id, 1)
-    void historyStore.fetchHistories()
-  }
+  isAnswerSaved.value = true
+  answeredStates.value = questions.value.map(() => true)
+
+  const summary = submitResult.summary
+  const detail = summary
+    ? `Correct ${summary.correct_questions}/${summary.total_questions} (${(summary.correct_rate * 100).toFixed(1)}%)`
+    : 'All answers submitted.'
+
+  toast.add({
+    severity: 'success',
+    summary: 'Submitted',
+    detail,
+    life: 3500,
+  })
+
+  historyStore.updateHistoryProgress(firstQuestion.history_id, 1)
+  void historyStore.fetchHistories()
 }
 
 /** 重置作答状态和计时器（点击刷新按钮时调用） */
 const resetState = () => {
   resetQuestionState()
   resetElapsedTime()
+  resetSaveStates()
+}
+
+/**
+ * 执行重置：
+ * 1. 先 flush 自动保存，避免旧请求回写；
+ * 2. 调用 /history/reset；
+ * 3. 成功后重置本地状态并刷新 history 列表。
+ */
+const performReset = async () => {
+  const historyId = currentHistoryId.value
+  if (!historyId || isResetting.value) return
+
+  isResetting.value = true
+  await flush()
+
+  const resetError = await historyStore.resetHistory(historyId)
+  if (resetError) {
+    toast.add({
+      severity: 'error',
+      summary: 'Reset failed',
+      detail: resetError,
+      life: 3500,
+    })
+    isResetting.value = false
+    return
+  }
+
+  resetState()
+  historyStore.updateHistoryProgress(historyId, 0)
+  void historyStore.fetchHistories()
+  emit('reset-completed')
+
+  toast.add({
+    severity: 'success',
+    summary: 'Reset completed',
+    detail: 'All answers have been reset.',
+    life: 2500,
+  })
+  isResetting.value = false
+}
+
+/** 弹出确认框，请用户确认是否重置当前题集 */
+const requestReset = () => {
+  if (!currentHistoryId.value || isResetting.value) return
+
+  confirm.require({
+    message: 'Reset all answers for this history?',
+    header: 'Reset Answers',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: 'Reset',
+      severity: 'danger',
+    },
+    accept: () => {
+      void performReset()
+    },
+  })
 }
 
 /**
@@ -209,6 +314,34 @@ watch(scrollToQuestionIndex, (index) => {
   void scrollToQuestion(index)
   scrollToQuestionIndex.value = -1
 })
+
+/**
+ * 单题自动保存失败时提示一次错误。
+ * 题目卡片只在保存成功时显示绿色标识，失败通过 toast 感知。
+ */
+watch(autoSaveError, (nextError) => {
+  if (!nextError) return
+
+  toast.add({
+    severity: 'error',
+    summary: 'Auto-save failed',
+    detail: nextError,
+    life: 3000,
+  })
+})
+
+/** 自动保存成功进度实时同步到侧边栏进度条（提交后不再覆盖 100%）。 */
+watch(
+  savedProgress,
+  (progress) => {
+    if (isAnswerSaved.value) return
+
+    const historyId = currentHistoryId.value
+    if (!historyId) return
+    historyStore.updateHistoryProgress(historyId, progress)
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>

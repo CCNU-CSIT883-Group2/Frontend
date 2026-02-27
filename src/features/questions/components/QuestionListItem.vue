@@ -11,6 +11,13 @@
         <!-- 折叠状态图标：折叠时向右箭头，展开时向下箭头 -->
         <i :class="isCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'" class="text-xs mr-2" />
         <span class="font-bold">Question {{ no }}</span>
+        <span
+          v-if="saveState === 'saved' && selectedAttemptIndices.length > 0"
+          class="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-green-600"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-green-600" />
+          Saved
+        </span>
         <!-- 难度星级（受用户"显示难度"设置控制） -->
         <div v-if="settings.questions.showDifficulty" class="font-bold ml-2 flex items-center">
           <span class="mr-2">-</span>
@@ -96,7 +103,7 @@
  */
 
 import { useUserSettingsStore } from '@/stores/userStore'
-import type { Question } from '@/types'
+import type { Question, QuestionSaveState } from '@/types'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
@@ -114,9 +121,12 @@ const props = withDefaults(
     no: number
     /** 是否已提交并保存作答 */
     isAnswered?: boolean
+    /** 单题自动保存状态（仅 saved 时显示绿色标识） */
+    saveState?: QuestionSaveState
   }>(),
   {
     isAnswered: false,
+    saveState: 'idle',
   },
 )
 

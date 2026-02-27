@@ -3,6 +3,8 @@
   <div class="m-3 flex w-full min-h-0 flex-1 flex-col gap-2">
     <!-- 全局 Toast 通知（用于显示提交成功/失败等消息） -->
     <Toast />
+    <!-- 全局 ConfirmDialog（供 reset/delete 等确认弹窗复用） -->
+    <ConfirmDialog />
 
     <!-- 主内容区：侧边栏 + 右侧面板 -->
     <div :class="['w-full flex min-h-0 flex-1 relative', isSidebarCollapsed ? 'lg:gap-0' : 'lg:gap-2']">

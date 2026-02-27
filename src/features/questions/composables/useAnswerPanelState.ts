@@ -33,6 +33,10 @@ export const useAnswerPanelState = (historyId: number) => {
   const attempts = ref<number[][]>([])
   /** 是否已提交并保存本题集的全部作答 */
   const isAnswerSaved = ref(false)
+  /** 题集首次加载时，已保存过答案的题目 ID 列表 */
+  const initialSavedQuestionIds = ref<number[]>([])
+  /** 题目与作答是否都已完成一次对齐（用于开启自动保存监听） */
+  const isHydrated = ref(false)
 
   const {
     questions: fetchedQuestions,
@@ -43,6 +47,7 @@ export const useAnswerPanelState = (historyId: number) => {
   const {
     attempts: fetchedAttempts,
     isFetching: isFetchingAttempts,
+    fetchAttempts,
     cancel: cancelFetchingAttempts,
   } = useAttempts(historyId)
 
@@ -59,6 +64,9 @@ export const useAnswerPanelState = (historyId: number) => {
       // 题目集切换后先重建 attempts 结构，保证索引与当前题目列表一一对应。
       questions.value = fetchedQuestions.value
       attempts.value = fetchedQuestions.value.map(() => [])
+      initialSavedQuestionIds.value = []
+      isAnswerSaved.value = false
+      isHydrated.value = false
     },
     { immediate: true },
   )
@@ -77,16 +85,38 @@ export const useAnswerPanelState = (historyId: number) => {
       fetchedAttempts.value.forEach((attemptItem) => {
         attemptsByQuestionId.set(attemptItem.question_id, attemptItem.user_answers)
       })
+      const submittedByQuestionId = new Map<number, boolean>()
+      fetchedAttempts.value.forEach((attemptItem) => {
+        submittedByQuestionId.set(
+          attemptItem.question_id,
+          (submittedByQuestionId.get(attemptItem.question_id) ?? false) || attemptItem.is_submitted,
+        )
+      })
 
       // 按题目 id 对齐历史作答，避免按数组下标对齐造成错位。
       attempts.value = questions.value.map(
         (question) => attemptsByQuestionId.get(question.question_id) ?? [],
       )
-      // 所有题目都有历史作答时，标记为已保存
-      isAnswerSaved.value = attempts.value.every((attempt) => attempt.length > 0)
+      // 记录初始已保存状态（用于自动保存标识初始化）
+      initialSavedQuestionIds.value = questions.value
+        .filter((question) => (attemptsByQuestionId.get(question.question_id) ?? []).length > 0)
+        .map((question) => question.question_id)
+      // 只要该 history 存在已提交记录，就将整个题集视为已提交（锁定答题控件）。
+      // 这样可以避免后端返回顺序或历史多条 attempt 干扰判定。
+      const hasSubmittedAttempt = fetchedAttempts.value.some((attemptItem) => attemptItem.is_submitted)
+      isAnswerSaved.value =
+        hasSubmittedAttempt ||
+        (questions.value.length > 0 &&
+          questions.value.every((question) => submittedByQuestionId.get(question.question_id) === true))
+      isHydrated.value = true
     },
     { immediate: true },
   )
+
+  /** 重新拉取当前题集的作答记录（如 reset 后对齐后端状态） */
+  const reloadAttempts = async () => {
+    await fetchAttempts()
+  }
 
   /**
    * 组件卸载时主动取消两个飞行中的请求。
@@ -102,5 +132,8 @@ export const useAnswerPanelState = (historyId: number) => {
     questions,
     attempts,
     isAnswerSaved,
+    initialSavedQuestionIds,
+    isHydrated,
+    reloadAttempts,
   }
 }
