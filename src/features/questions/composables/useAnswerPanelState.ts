@@ -33,9 +33,15 @@ export const useAnswerPanelState = (historyId: number) => {
   const attempts = ref<number[][]>([])
   /** 是否已提交并保存本题集的全部作答 */
   const isAnswerSaved = ref(false)
-  /** 题集首次加载时，已保存过答案的题目 ID 列表 */
+  /**
+   * 题集首次加载时，已保存过答案的题目 ID 列表。
+   * 该值只用于“初始化自动保存状态”，避免页面初载时把已有答案误判为待保存。
+   */
   const initialSavedQuestionIds = ref<number[]>([])
-  /** 题目与作答是否都已完成一次对齐（用于开启自动保存监听） */
+  /**
+   * 题目与作答是否都已完成一次对齐（用于开启自动保存监听）。
+   * false 阶段不允许触发自动保存，防止“回填历史数据”被当成用户新编辑。
+   */
   const isHydrated = ref(false)
 
   const {
@@ -66,6 +72,7 @@ export const useAnswerPanelState = (historyId: number) => {
       attempts.value = fetchedQuestions.value.map(() => [])
       initialSavedQuestionIds.value = []
       isAnswerSaved.value = false
+      // 每次切换 history 都重置 hydrate，等待新一轮 questions+attempts 对齐完成。
       isHydrated.value = false
     },
     { immediate: true },
@@ -87,6 +94,7 @@ export const useAnswerPanelState = (historyId: number) => {
       })
       const submittedByQuestionId = new Map<number, boolean>()
       fetchedAttempts.value.forEach((attemptItem) => {
+        // 同一题可能有多条 attempt，聚合时只要有一条已提交就视为 true。
         submittedByQuestionId.set(
           attemptItem.question_id,
           (submittedByQuestionId.get(attemptItem.question_id) ?? false) || attemptItem.is_submitted,
@@ -108,12 +116,16 @@ export const useAnswerPanelState = (historyId: number) => {
         hasSubmittedAttempt ||
         (questions.value.length > 0 &&
           questions.value.every((question) => submittedByQuestionId.get(question.question_id) === true))
+      // 到这里为止，questions + attempts + submitted 状态已经一致，可安全开启自动保存监听。
       isHydrated.value = true
     },
     { immediate: true },
   )
 
-  /** 重新拉取当前题集的作答记录（如 reset 后对齐后端状态） */
+  /**
+   * 重新拉取当前题集的作答记录（如 reset 后对齐后端状态）。
+   * 由外层面板在 reset 成功后调用，避免出现“后端已重置、本地仍显示旧答案”。
+   */
   const reloadAttempts = async () => {
     await fetchAttempts()
   }

@@ -126,6 +126,12 @@ const { submit, isSubmitting } = useSubmit()
 const isResetting = ref(false)
 const currentHistoryId = computed<number | null>(() => questions.value[0]?.history_id ?? null)
 
+/**
+ * 自动保存引擎：
+ * - 管理每题保存状态（供卡片右侧显示绿色 Saved 标识）；
+ * - 计算“已保存进度”驱动侧边栏 progress；
+ * - 暴露 flush/resetSaveStates，供 submit/reset 前后控制持久化一致性。
+ */
 const {
   questionSaveStateMap,
   error: autoSaveError,
@@ -157,6 +163,7 @@ const disableSubmit = computed(() => {
 })
 
 const toAttemptAnswerInput = (questionId: number, selectedAnswers: number[]): AttemptAnswerInput => {
+  // 提交前再次规范化答案：去重 + 升序，保证与自动保存口径一致。
   const normalizedAnswers = Array.from(new Set(selectedAnswers)).sort((left, right) => left - right)
   return {
     question_id: questionId,
@@ -177,6 +184,7 @@ const submitAnswers = async () => {
   const firstQuestion = questions.value[0]
   if (!firstQuestion) return
 
+  // 先把防抖队列中的“最后一次编辑”落盘，避免提交的答案比 UI 落后。
   await flush()
 
   const answers = questions.value.map((question, index) =>
@@ -220,6 +228,7 @@ const submitAnswers = async () => {
 const resetState = () => {
   resetQuestionState()
   resetElapsedTime()
+  // 清空自动保存内部状态，确保重置后每题从 idle 重新开始。
   resetSaveStates()
 }
 
@@ -234,6 +243,7 @@ const performReset = async () => {
   if (!historyId || isResetting.value) return
 
   isResetting.value = true
+  // 重置前强制落盘，避免重置后旧请求再回写造成状态闪烁。
   await flush()
 
   const resetError = await historyStore.resetHistory(historyId)
@@ -249,6 +259,7 @@ const performReset = async () => {
   }
 
   resetState()
+  // 先本地置零，确保侧边栏即时反馈；随后 fetchHistories 做后端对齐。
   historyStore.updateHistoryProgress(historyId, 0)
   void historyStore.fetchHistories()
   emit('reset-completed')
@@ -334,10 +345,12 @@ watch(autoSaveError, (nextError) => {
 watch(
   savedProgress,
   (progress) => {
+    // 题集已提交后 progress 固定为 100%，不再被自动保存进度覆盖。
     if (isAnswerSaved.value) return
 
     const historyId = currentHistoryId.value
     if (!historyId) return
+    // 自动保存每成功一题，立即同步到侧边栏进度圆环。
     historyStore.updateHistoryProgress(historyId, progress)
   },
   { immediate: true },

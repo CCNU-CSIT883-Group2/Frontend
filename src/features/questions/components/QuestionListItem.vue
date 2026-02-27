@@ -11,6 +11,11 @@
         <!-- 折叠状态图标：折叠时向右箭头，展开时向下箭头 -->
         <i :class="isCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'" class="text-xs mr-2" />
         <span class="font-bold">Question {{ no }}</span>
+        <!--
+          单题保存成功标识：
+          - 仅在 saveState='saved' 且当前题仍有答案时展示；
+          - 清空答案后该标识会自动消失（等待下一次成功保存）。
+        -->
         <span
           v-if="saveState === 'saved' && selectedAttemptIndices.length > 0"
           class="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-green-600"
