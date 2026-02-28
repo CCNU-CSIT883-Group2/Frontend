@@ -162,6 +162,10 @@ const disableSubmit = computed(() => {
   return attempts.value.some((attempt) => attempt.length === 0)
 })
 
+/**
+ * 将组件内的作答数组转换为后端提交所需结构。
+ * 提交前会做去重与升序，保证自动保存与最终提交口径一致。
+ */
 const toAttemptAnswerInput = (questionId: number, selectedAnswers: number[]): AttemptAnswerInput => {
   // 提交前再次规范化答案：去重 + 升序，保证与自动保存口径一致。
   const normalizedAnswers = Array.from(new Set(selectedAnswers)).sort((left, right) => left - right)

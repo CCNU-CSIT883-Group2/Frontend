@@ -47,12 +47,18 @@ const normalizeAnswers = (answers: number[]) =>
 /** 基于规范化后的答案生成签名，用于快速判断“答案是否真的变化”。 */
 const buildAnswerSignature = (answers: number[]) => normalizeAnswers(answers).join(',')
 
+/** 清理单题防抖计时器（timer 为空时安全 no-op）。 */
 const clearTimer = (timer: ReturnType<typeof setTimeout> | undefined) => {
   if (timer !== undefined) {
     clearTimeout(timer)
   }
 }
 
+/**
+ * 自动保存 composable：
+ * - 提供单题防抖保存、状态跟踪和 flush 落盘能力；
+ * - 对每题维护版本号，避免旧请求晚到覆盖新编辑。
+ */
 export const useQuestionAutoSave = ({
   historyId,
   questions,
@@ -175,6 +181,7 @@ export const useQuestionAutoSave = ({
       return Promise.resolve()
     }
 
+    /** 执行当前队列 payload 的真实请求，并在完成后清理 in-flight 状态。 */
     const requestPromise = (async () => {
       pendingCount.value += 1
 
